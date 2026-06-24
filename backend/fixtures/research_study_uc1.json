@@ -1,0 +1,11 @@
+{
+  "resourceType": "ResearchStudy",
+  "id": "uc1-demo-research-study",
+  "title": "Use Case 1 Demo Study (Exit Example)",
+  "status": "active",
+  "protocol": [
+    {
+      "reference": "PlanDefinition/dynamic-visit-schedule-exit-example-PlanDefinition"
+    }
+  ]
+}
