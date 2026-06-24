@@ -1,0 +1,665 @@
+{
+  "resourceType" : "PlanDefinition",
+  "id" : "dynamic-visit-schedule-exit-example-PlanDefinition",
+  "meta" : {
+    "versionId" : "711",
+    "lastUpdated" : "2026-01-09T20:46:14.391964Z",
+    "profile" : ["http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaPlanDefinition"]
+  },
+  "text" : {
+    "status" : "extensions",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\">\n  <table class=\"narrative-table\">\n    <tbody>\n<tr>\n\n\n<th colspan=\"2\" scope=\"row\" class=\"row-header\">Metadata</th>\n\n\n</tr>\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Title</th>\n\n\n\n<td class=\"content-container\">dynamic-visit-schedule-exit-example-PlanDefinition</td>\n\n\n</tr>\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Version</th>\n\n\n\n<td class=\"content-container\">2.0.0-ballot</td>\n\n\n</tr>\n\n\n\n\n\n\n\n  \n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Identifier</th>\n\n\n\n<td class=\"content-container\">12c63d44-415f-4834-bd6c-630790711d4b</td>\n\n\n</tr>\n\n\n  \n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Identifier</th>\n\n\n\n<td class=\"content-container\">urn:oid:2.16.840.1.113883.4.642.40.224.34.5</td>\n\n\n</tr>\n\n\n\n\n\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Jurisdiction</th>\n\n\n\n<td class=\"content-container\">\n    World\n\n\n</td>\n\n\n</tr>\n\n\n\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Steward (Publisher)</th>\n\n\n\n<td class=\"content-container\">HL7 International / Biomedical Research and Regulation</td>\n\n\n</tr>\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Steward Contact</th>\n\n\n\n<td class=\"content-container\">HL7 International / Biomedical Research and Regulation</td>\n\n\n</tr>\n\n\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Description</th>\n\n\n\n<td class=\"content-container\"><div><p>dynamic-visit-schedule-exit-example-PlanDefinition</p>\n</div></td>\n\n\n</tr>\n\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Type</th>\n\n\n\n<td class=\"content-container\">\n    clinical-protocol from <a href=\"http://terminology.hl7.org/7.1.0/CodeSystem-plan-definition-type.html\">http://terminology.hl7.org/CodeSystem/plan-definition-type</a> \n\n\n</td>\n\n\n</tr>\n\n\n\n\n<tr>\n\n\n<th colspan=\"2\" scope=\"row\" class=\"row-header\">PlanDefinition Action</th>\n\n\n</tr>\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Id</th>\n\n\n\n<td class=\"content-container\">0700e721-1f12-4998-89b8-6f4e649b62f7</td>\n\n\n</tr>\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Title</th>\n\n\n\n<td class=\"content-container\">Screening</td>\n\n\n</tr>\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Description</th>\n\n\n\n<td class=\"content-container\"><div><p>Screening</p>\n</div></td>\n\n\n</tr>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Grouping Behavior</th>\n\n\n\n<td class=\"content-container\">Visual Group</td>\n\n\n</tr>\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Selection Behavior</th>\n\n\n\n<td class=\"content-container\">Exactly One</td>\n\n\n</tr>\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Definition</th>\n\n\n\n<td class=\"content-container\"><code>http://example.org/PlanDefinition/dynamic-visit-schedule-exit-example-Screening-PlanDefinition</code></td>\n\n\n</tr>\n\n\n\n\n\n  \n    \n      \n      \n\n    \n    \n      \n\n    \n  \n\n\n\n<tr>\n\n\n<th colspan=\"2\" scope=\"row\" class=\"row-header\">PlanDefinition Action</th>\n\n\n</tr>\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Id</th>\n\n\n\n<td class=\"content-container\">a1806239-54f3-4762-af3f-edb9d80d29dc</td>\n\n\n</tr>\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Title</th>\n\n\n\n<td class=\"content-container\">Treatment Day 1</td>\n\n\n</tr>\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Description</th>\n\n\n\n<td class=\"content-container\"><div><p>Treatment Day 1</p>\n</div></td>\n\n\n</tr>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Grouping Behavior</th>\n\n\n\n<td class=\"content-container\">Visual Group</td>\n\n\n</tr>\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Selection Behavior</th>\n\n\n\n<td class=\"content-container\">Exactly One</td>\n\n\n</tr>\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Definition</th>\n\n\n\n<td class=\"content-container\"><code>http://example.org/PlanDefinition/dynamic-visit-schedule-exit-example-Treatment-Day-1-PlanDefinition</code></td>\n\n\n</tr>\n\n\n\n\n\n  \n    \n      \n      \n\n    \n    \n      \n\n    \n  \n    \n      \n      \n<tr>\n\n\n<th colspan=\"2\" scope=\"row\" class=\"row-header\">PlanDefinition Sub-Action (Parent Action ID: a1806239-54f3-4762-af3f-edb9d80d29dc)</th>\n\n\n</tr>\n\n\n\n\n\n\n\n\n\n\n\n\n\n<tr>\n  <th scope=\"row\" class=\"row-header\">Condition</th>\n  <td class=\"content-container\">\n  <em>Kind</em>: Start\n  \n    <br/>\n    \n   \n  </td>\n</tr>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n    \n    \n      \n<tr>\n\n\n<th colspan=\"2\" scope=\"row\" class=\"row-header\">PlanDefinition Sub-Action</th>\n\n\n</tr>\n\n\n\n\n\n\n\n\n\n\n\n\n\n<tr>\n  <th scope=\"row\" class=\"row-header\">Condition</th>\n  <td class=\"content-container\">\n  <em>Kind</em>: Start\n  \n    <br/>\n    \n   \n  </td>\n</tr>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n    \n  \n\n\n\n<tr>\n\n\n<th colspan=\"2\" scope=\"row\" class=\"row-header\">PlanDefinition Action</th>\n\n\n</tr>\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Id</th>\n\n\n\n<td class=\"content-container\">349447c3-8ad4-4034-8c31-c3d96dcc5f9a</td>\n\n\n</tr>\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Title</th>\n\n\n\n<td class=\"content-container\">Day 7</td>\n\n\n</tr>\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Description</th>\n\n\n\n<td class=\"content-container\"><div><p>Day 7</p>\n</div></td>\n\n\n</tr>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Grouping Behavior</th>\n\n\n\n<td class=\"content-container\">Visual Group</td>\n\n\n</tr>\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Selection Behavior</th>\n\n\n\n<td class=\"content-container\">Exactly One</td>\n\n\n</tr>\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Definition</th>\n\n\n\n<td class=\"content-container\"><code>http://example.org/PlanDefinition/dynamic-visit-schedule-exit-example-Day-7-PlanDefinition</code></td>\n\n\n</tr>\n\n\n\n\n\n  \n    \n      \n      \n<tr>\n\n\n<th colspan=\"2\" scope=\"row\" class=\"row-header\">PlanDefinition Sub-Action (Parent Action ID: 349447c3-8ad4-4034-8c31-c3d96dcc5f9a)</th>\n\n\n</tr>\n\n\n\n\n\n\n\n\n\n\n\n\n\n<tr>\n  <th scope=\"row\" class=\"row-header\">Condition</th>\n  <td class=\"content-container\">\n  <em>Kind</em>: Start\n  \n    <br/>\n    \n   \n  </td>\n</tr>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n    \n    \n      \n<tr>\n\n\n<th colspan=\"2\" scope=\"row\" class=\"row-header\">PlanDefinition Sub-Action</th>\n\n\n</tr>\n\n\n\n\n\n\n\n\n\n\n\n\n\n<tr>\n  <th scope=\"row\" class=\"row-header\">Condition</th>\n  <td class=\"content-container\">\n  <em>Kind</em>: Start\n  \n    <br/>\n    \n   \n  </td>\n</tr>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n    \n  \n    \n      \n      \n\n    \n    \n      \n\n    \n  \n\n\n\n<tr>\n\n\n<th colspan=\"2\" scope=\"row\" class=\"row-header\">PlanDefinition Action</th>\n\n\n</tr>\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Id</th>\n\n\n\n<td class=\"content-container\">d0dd287a-0a87-439d-95cc-8690e7abf0cb</td>\n\n\n</tr>\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Title</th>\n\n\n\n<td class=\"content-container\">Day 15</td>\n\n\n</tr>\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Description</th>\n\n\n\n<td class=\"content-container\"><div><p>Day 15</p>\n</div></td>\n\n\n</tr>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Grouping Behavior</th>\n\n\n\n<td class=\"content-container\">Visual Group</td>\n\n\n</tr>\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Selection Behavior</th>\n\n\n\n<td class=\"content-container\">Exactly One</td>\n\n\n</tr>\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Definition</th>\n\n\n\n<td class=\"content-container\"><code>http://example.org/PlanDefinition/dynamic-visit-schedule-exit-example-Day-15-PlanDefinition</code></td>\n\n\n</tr>\n\n\n\n\n\n  \n    \n      \n      \n\n    \n    \n      \n\n    \n  \n\n\n\n<tr>\n\n\n<th colspan=\"2\" scope=\"row\" class=\"row-header\">PlanDefinition Action</th>\n\n\n</tr>\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Id</th>\n\n\n\n<td class=\"content-container\">dbc35dee-a5f2-473f-b9b1-bb14b2a1c9ef</td>\n\n\n</tr>\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Title</th>\n\n\n\n<td class=\"content-container\">End of Study</td>\n\n\n</tr>\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Description</th>\n\n\n\n<td class=\"content-container\"><div><p>End of Study</p>\n</div></td>\n\n\n</tr>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Grouping Behavior</th>\n\n\n\n<td class=\"content-container\">Visual Group</td>\n\n\n</tr>\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Selection Behavior</th>\n\n\n\n<td class=\"content-container\">Exactly One</td>\n\n\n</tr>\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Definition</th>\n\n\n\n<td class=\"content-container\"><code>http://example.org/PlanDefinition/dynamic-visit-schedule-exit-example-End-of-Study-PlanDefinition</code></td>\n\n\n</tr>\n\n\n\n\n\n  \n    \n      \n      \n\n    \n    \n      \n\n    \n  \n\n\n\n<tr>\n\n\n<th colspan=\"2\" scope=\"row\" class=\"row-header\">PlanDefinition Action</th>\n\n\n</tr>\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Id</th>\n\n\n\n<td class=\"content-container\">76fb46ca-2a08-4421-8ce9-b8d412db2fb5</td>\n\n\n</tr>\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Title</th>\n\n\n\n<td class=\"content-container\">Follow Up</td>\n\n\n</tr>\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Description</th>\n\n\n\n<td class=\"content-container\"><div><p>Follow Up</p>\n</div></td>\n\n\n</tr>\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n<tr>\n\n\n<th scope=\"row\" class=\"row-header\">Definition</th>\n\n\n\n<td class=\"content-container\"><code>http://example.org/PlanDefinition/dynamic-visit-schedule-exit-example-Follow-Up-PlanDefinition</code></td>\n\n\n</tr>\n\n\n\n\n\n\n\n\n\n<tr>\n  <th colspan=\"2\" scope=\"row\" class=\"row-header\">Generated using version 0.5.4 of the sample-content-ig Liquid templates</th>\n</tr>\n\n    </tbody>\n  </table>\n</div>"
+  },
+  "url" : "http://hl7.org/fhir/uv/vulcan-schedule/PlanDefinition/dynamic-visit-schedule-exit-example-PlanDefinition",
+  "identifier" : [{
+    "system" : "http://example.org/plandefinition",
+    "value" : "12c63d44-415f-4834-bd6c-630790711d4b"
+  },
+  {
+    "system" : "urn:ietf:rfc:3986",
+    "value" : "urn:oid:2.16.840.1.113883.4.642.40.224.34.5"
+  }],
+  "version" : "2.0.0-ballot",
+  "name" : "dynamic-visit-schedule-exit-example-PlanDefinition",
+  "title" : "dynamic-visit-schedule-exit-example-PlanDefinition",
+  "type" : {
+    "coding" : [{
+      "system" : "http://terminology.hl7.org/CodeSystem/plan-definition-type",
+      "code" : "clinical-protocol"
+    }]
+  },
+  "status" : "active",
+  "date" : "2026-05-27T16:18:07+01:00",
+  "publisher" : "HL7 International / Biomedical Research and Regulation",
+  "contact" : [{
+    "name" : "HL7 International / Biomedical Research and Regulation",
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://www.hl7.org/Special/committees/rcrim"
+    },
+    {
+      "system" : "email",
+      "value" : "biomedrr@lists.hl7.org"
+    }]
+  }],
+  "description" : "dynamic-visit-schedule-exit-example-PlanDefinition",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+      "code" : "001",
+      "display" : "World"
+    }]
+  }],
+  "action" : [{
+    "id" : "0700e721-1f12-4998-89b8-6f4e649b62f7",
+    "extension" : [{
+      "extension" : [{
+        "url" : "soaTimePointType",
+        "valueString" : "Interaction"
+      },
+      {
+        "url" : "soaPlannedTimePoint",
+        "valueQuantity" : {
+          "value" : -1,
+          "system" : "http://unitsofmeasure.org",
+          "code" : "d"
+        }
+      },
+      {
+        "url" : "soaPlannedRange",
+        "valueRange" : {
+          "low" : {
+            "value" : 0,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          },
+          "high" : {
+            "value" : 13,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          }
+        }
+      },
+      {
+        "url" : "soaReferenceTimePoint",
+        "valueString" : "Treatment Day 1"
+      },
+      {
+        "url" : "soaRangeFromTimePoint",
+        "valueString" : "Treatment Day 1"
+      },
+      {
+        "url" : "soaPlannedDuration",
+        "valueDuration" : {
+          "value" : 24,
+          "system" : "http://unitsofmeasure.org",
+          "code" : "h"
+        }
+      },
+      {
+        "url" : "soaRepeatAllowed",
+        "valueBoolean" : false
+      }],
+      "url" : "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTimepoint"
+    }],
+    "title" : "Screening",
+    "description" : "Screening",
+    "groupingBehavior" : "visual-group",
+    "selectionBehavior" : "exactly-one",
+    "definitionCanonical" : "http://example.org/PlanDefinition/dynamic-visit-schedule-exit-example-Screening-PlanDefinition",
+    "action" : [{
+      "extension" : [{
+        "extension" : [{
+          "url" : "soaTargetId",
+          "valueString" : "a1806239-54f3-4762-af3f-edb9d80d29dc"
+        },
+        {
+          "url" : "soaTransitionType",
+          "valueString" : "SS"
+        },
+        {
+          "url" : "soaTransitionDelay",
+          "valueDuration" : {
+            "value" : 1,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          }
+        },
+        {
+          "url" : "soaTransitionRange",
+          "valueRange" : {
+            "low" : {
+              "value" : 0,
+              "system" : "http://unitsofmeasure.org",
+              "code" : "d"
+            },
+            "high" : {
+              "value" : 13,
+              "system" : "http://unitsofmeasure.org",
+              "code" : "d"
+            }
+          }
+        }],
+        "url" : "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTransition"
+      }]
+    }]
+  },
+  {
+    "id" : "a1806239-54f3-4762-af3f-edb9d80d29dc",
+    "extension" : [{
+      "extension" : [{
+        "url" : "soaTimePointType",
+        "valueString" : "Interaction"
+      },
+      {
+        "url" : "soaPlannedTimePoint",
+        "valueQuantity" : {
+          "value" : 1,
+          "system" : "http://unitsofmeasure.org",
+          "code" : "d"
+        }
+      },
+      {
+        "url" : "soaPlannedRange",
+        "valueRange" : {
+          "low" : {
+            "value" : 0,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "h"
+          },
+          "high" : {
+            "value" : 0,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "h"
+          }
+        }
+      },
+      {
+        "url" : "soaReferenceTimePoint",
+        "valueString" : "Treatment Day 1"
+      },
+      {
+        "url" : "soaRangeFromTimePoint",
+        "valueString" : "Treatment Day 1"
+      },
+      {
+        "url" : "soaPlannedDuration",
+        "valueDuration" : {
+          "value" : 24,
+          "system" : "http://unitsofmeasure.org",
+          "code" : "h"
+        }
+      },
+      {
+        "url" : "soaRepeatAllowed",
+        "valueBoolean" : false
+      }],
+      "url" : "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTimepoint"
+    }],
+    "title" : "Treatment Day 1",
+    "description" : "Treatment Day 1",
+    "groupingBehavior" : "visual-group",
+    "selectionBehavior" : "exactly-one",
+    "definitionCanonical" : "http://example.org/PlanDefinition/dynamic-visit-schedule-exit-example-Treatment-Day-1-PlanDefinition",
+    "action" : [{
+      "extension" : [{
+        "extension" : [{
+          "url" : "soaTargetId",
+          "valueString" : "349447c3-8ad4-4034-8c31-c3d96dcc5f9a"
+        },
+        {
+          "url" : "soaTransitionType",
+          "valueString" : "SS"
+        },
+        {
+          "url" : "soaTransitionDelay",
+          "valueDuration" : {
+            "value" : 6,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          }
+        },
+        {
+          "url" : "soaTransitionRange",
+          "valueRange" : {
+            "low" : {
+              "value" : 1,
+              "system" : "http://unitsofmeasure.org",
+              "code" : "d"
+            },
+            "high" : {
+              "value" : 1,
+              "system" : "http://unitsofmeasure.org",
+              "code" : "d"
+            }
+          }
+        }],
+        "url" : "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTransition"
+      }]
+    },
+    {
+      "extension" : [{
+        "extension" : [{
+          "url" : "soaTargetId",
+          "valueString" : "dbc35dee-a5f2-473f-b9b1-bb14b2a1c9ef"
+        },
+        {
+          "url" : "soaTransitionType",
+          "valueString" : "FS"
+        },
+        {
+          "url" : "soaTransitionDelay",
+          "valueDuration" : {
+            "value" : 5,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          }
+        },
+        {
+          "url" : "soaTransitionRange",
+          "valueRange" : {
+            "low" : {
+              "value" : 1,
+              "system" : "http://unitsofmeasure.org",
+              "code" : "d"
+            },
+            "high" : {
+              "value" : 1,
+              "system" : "http://unitsofmeasure.org",
+              "code" : "d"
+            }
+          }
+        }],
+        "url" : "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTransition"
+      }],
+      "condition" : [{
+        "kind" : "start",
+        "expression" : {
+          "language" : "text/x-soa-expressionplain",
+          "expression" : "{'withdraw':True, 'operation': '=='}"
+        }
+      }]
+    }]
+  },
+  {
+    "id" : "349447c3-8ad4-4034-8c31-c3d96dcc5f9a",
+    "extension" : [{
+      "extension" : [{
+        "url" : "soaTimePointType",
+        "valueString" : "Interaction"
+      },
+      {
+        "url" : "soaPlannedTimePoint",
+        "valueQuantity" : {
+          "value" : 7,
+          "system" : "http://unitsofmeasure.org",
+          "code" : "d"
+        }
+      },
+      {
+        "url" : "soaPlannedRange",
+        "valueRange" : {
+          "low" : {
+            "value" : 1,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          },
+          "high" : {
+            "value" : 1,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          }
+        }
+      },
+      {
+        "url" : "soaReferenceTimePoint",
+        "valueString" : "Treatment Day 1"
+      },
+      {
+        "url" : "soaRangeFromTimePoint",
+        "valueString" : "Treatment Day 1"
+      },
+      {
+        "url" : "soaPlannedDuration",
+        "valueDuration" : {
+          "value" : 24,
+          "system" : "http://unitsofmeasure.org",
+          "code" : "h"
+        }
+      },
+      {
+        "url" : "soaRepeatAllowed",
+        "valueBoolean" : false
+      }],
+      "url" : "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTimepoint"
+    }],
+    "title" : "Day 7",
+    "description" : "Day 7",
+    "groupingBehavior" : "visual-group",
+    "selectionBehavior" : "exactly-one",
+    "definitionCanonical" : "http://example.org/PlanDefinition/dynamic-visit-schedule-exit-example-Day-7-PlanDefinition",
+    "action" : [{
+      "extension" : [{
+        "extension" : [{
+          "url" : "soaTargetId",
+          "valueString" : "dbc35dee-a5f2-473f-b9b1-bb14b2a1c9ef"
+        },
+        {
+          "url" : "soaTransitionType",
+          "valueString" : "FS"
+        },
+        {
+          "url" : "soaTransitionDelay",
+          "valueDuration" : {
+            "value" : 5,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          }
+        },
+        {
+          "url" : "soaTransitionRange",
+          "valueRange" : {
+            "low" : {
+              "value" : 1,
+              "system" : "http://unitsofmeasure.org",
+              "code" : "d"
+            },
+            "high" : {
+              "value" : 1,
+              "system" : "http://unitsofmeasure.org",
+              "code" : "d"
+            }
+          }
+        }],
+        "url" : "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTransition"
+      }],
+      "condition" : [{
+        "kind" : "start",
+        "expression" : {
+          "language" : "text/x-soa-expressionplain",
+          "expression" : "{'withdraw':True, 'operation': '=='}"
+        }
+      }]
+    },
+    {
+      "extension" : [{
+        "extension" : [{
+          "url" : "soaTargetId",
+          "valueString" : "d0dd287a-0a87-439d-95cc-8690e7abf0cb"
+        },
+        {
+          "url" : "soaTransitionType",
+          "valueString" : "FS"
+        },
+        {
+          "url" : "soaTransitionDelay",
+          "valueDuration" : {
+            "value" : 7,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          }
+        },
+        {
+          "url" : "soaTransitionRange",
+          "valueRange" : {
+            "low" : {
+              "value" : 2,
+              "system" : "http://unitsofmeasure.org",
+              "code" : "d"
+            },
+            "high" : {
+              "value" : 2,
+              "system" : "http://unitsofmeasure.org",
+              "code" : "d"
+            }
+          }
+        }],
+        "url" : "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTransition"
+      }]
+    }]
+  },
+  {
+    "id" : "d0dd287a-0a87-439d-95cc-8690e7abf0cb",
+    "extension" : [{
+      "extension" : [{
+        "url" : "soaTimePointType",
+        "valueString" : "Interaction"
+      },
+      {
+        "url" : "soaPlannedTimePoint",
+        "valueQuantity" : {
+          "value" : 15,
+          "system" : "http://unitsofmeasure.org",
+          "code" : "d"
+        }
+      },
+      {
+        "url" : "soaPlannedRange",
+        "valueRange" : {
+          "low" : {
+            "value" : 2,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          },
+          "high" : {
+            "value" : 2,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          }
+        }
+      },
+      {
+        "url" : "soaReferenceTimePoint",
+        "valueString" : "Treatment Day 1"
+      },
+      {
+        "url" : "soaRangeFromTimePoint",
+        "valueString" : "Treatment Day 1"
+      },
+      {
+        "url" : "soaPlannedDuration",
+        "valueDuration" : {
+          "value" : 24,
+          "system" : "http://unitsofmeasure.org",
+          "code" : "h"
+        }
+      },
+      {
+        "url" : "soaRepeatAllowed",
+        "valueBoolean" : false
+      }],
+      "url" : "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTimepoint"
+    }],
+    "title" : "Day 15",
+    "description" : "Day 15",
+    "groupingBehavior" : "visual-group",
+    "selectionBehavior" : "exactly-one",
+    "definitionCanonical" : "http://example.org/PlanDefinition/dynamic-visit-schedule-exit-example-Day-15-PlanDefinition",
+    "action" : [{
+      "extension" : [{
+        "extension" : [{
+          "url" : "soaTargetId",
+          "valueString" : "dbc35dee-a5f2-473f-b9b1-bb14b2a1c9ef"
+        },
+        {
+          "url" : "soaTransitionType",
+          "valueString" : "SS"
+        },
+        {
+          "url" : "soaTransitionDelay",
+          "valueDuration" : {
+            "value" : 6,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          }
+        },
+        {
+          "url" : "soaTransitionRange",
+          "valueRange" : {
+            "low" : {
+              "value" : 1,
+              "system" : "http://unitsofmeasure.org",
+              "code" : "d"
+            },
+            "high" : {
+              "value" : 1,
+              "system" : "http://unitsofmeasure.org",
+              "code" : "d"
+            }
+          }
+        }],
+        "url" : "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTransition"
+      }]
+    }]
+  },
+  {
+    "id" : "dbc35dee-a5f2-473f-b9b1-bb14b2a1c9ef",
+    "extension" : [{
+      "extension" : [{
+        "url" : "soaTimePointType",
+        "valueString" : "Interaction"
+      },
+      {
+        "url" : "soaPlannedTimePoint",
+        "valueQuantity" : {
+          "value" : 21,
+          "system" : "http://unitsofmeasure.org",
+          "code" : "d"
+        }
+      },
+      {
+        "url" : "soaPlannedRange",
+        "valueRange" : {
+          "low" : {
+            "value" : 1,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          },
+          "high" : {
+            "value" : 1,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          }
+        }
+      },
+      {
+        "url" : "soaReferenceTimePoint",
+        "valueString" : "Treatment Day 1"
+      },
+      {
+        "url" : "soaRangeFromTimePoint",
+        "valueString" : "Treatment Day 1"
+      },
+      {
+        "url" : "soaPlannedDuration",
+        "valueDuration" : {
+          "value" : 24,
+          "system" : "http://unitsofmeasure.org",
+          "code" : "h"
+        }
+      },
+      {
+        "url" : "soaRepeatAllowed",
+        "valueBoolean" : false
+      }],
+      "url" : "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTimepoint"
+    }],
+    "title" : "End of Study",
+    "description" : "End of Study",
+    "groupingBehavior" : "visual-group",
+    "selectionBehavior" : "exactly-one",
+    "definitionCanonical" : "http://example.org/PlanDefinition/dynamic-visit-schedule-exit-example-End-of-Study-PlanDefinition",
+    "action" : [{
+      "extension" : [{
+        "extension" : [{
+          "url" : "soaTargetId",
+          "valueString" : "76fb46ca-2a08-4421-8ce9-b8d412db2fb5"
+        },
+        {
+          "url" : "soaTransitionType",
+          "valueString" : "FS"
+        },
+        {
+          "url" : "soaTransitionDelay",
+          "valueDuration" : {
+            "value" : 30,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          }
+        },
+        {
+          "url" : "soaTransitionRange",
+          "valueRange" : {
+            "low" : {
+              "value" : 7,
+              "system" : "http://unitsofmeasure.org",
+              "code" : "d"
+            },
+            "high" : {
+              "value" : 7,
+              "system" : "http://unitsofmeasure.org",
+              "code" : "d"
+            }
+          }
+        }],
+        "url" : "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTransition"
+      }]
+    }]
+  },
+  {
+    "id" : "76fb46ca-2a08-4421-8ce9-b8d412db2fb5",
+    "extension" : [{
+      "extension" : [{
+        "url" : "soaTimePointType",
+        "valueString" : "Interaction"
+      },
+      {
+        "url" : "soaPlannedTimePoint",
+        "valueQuantity" : {
+          "value" : 30,
+          "system" : "http://unitsofmeasure.org",
+          "code" : "d"
+        }
+      },
+      {
+        "url" : "soaPlannedRange",
+        "valueRange" : {
+          "low" : {
+            "value" : 7,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          },
+          "high" : {
+            "value" : 7,
+            "system" : "http://unitsofmeasure.org",
+            "code" : "d"
+          }
+        }
+      },
+      {
+        "url" : "soaReferenceTimePoint",
+        "valueString" : "End of Study"
+      },
+      {
+        "url" : "soaRangeFromTimePoint",
+        "valueString" : "End of Study"
+      },
+      {
+        "url" : "soaPlannedDuration",
+        "valueDuration" : {
+          "value" : 24,
+          "system" : "http://unitsofmeasure.org",
+          "code" : "h"
+        }
+      },
+      {
+        "url" : "soaRepeatAllowed",
+        "valueBoolean" : false
+      }],
+      "url" : "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTimepoint"
+    }],
+    "title" : "Follow Up",
+    "description" : "Follow Up",
+    "definitionCanonical" : "http://example.org/PlanDefinition/dynamic-visit-schedule-exit-example-Follow-Up-PlanDefinition"
+  }]
+}
