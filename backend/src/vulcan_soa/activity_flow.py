@@ -348,3 +348,53 @@ async def respond(
         "Appointment", appointment["id"], appointment, if_match=if_match_header(appointment)
     )
     return await schedule_payload(client, workspace)
+
+
+def _request_text(request: dict) -> str:
+    concept = request.get("code", {}).get("concept", {})
+    if concept.get("text"):
+        return concept["text"]
+    for coding in concept.get("coding", []):
+        if coding.get("display"):
+            return coding["display"]
+    return tag_value(request) or ""
+
+
+async def perform(client: FhirClient, subject_id: str, action_id: str) -> dict:
+    workspace = await _load_workspace(client, subject_id)
+    chain = _require_phase(workspace.chains.get(action_id), action_id, "booked")
+    order = chain.requests["order"]
+    created_encounter = await client.create(
+        "Encounter",
+        {
+            "resourceType": "Encounter",
+            "status": "in-progress",
+            "class": [
+                {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/v3-ActCode", "code": "AMB"}]}
+            ],
+            "subject": {"reference": f"Patient/{workspace.patient_id}"},
+            "appointment": [{"reference": f"Appointment/{chain.appointment['id']}"}],
+            "basedOn": [{"reference": f"ServiceRequest/{order['id']}"}],
+            "identifier": [visit_tag(workspace.plan_definition_id, action_id)],
+        },
+    )
+
+    for activity_id, by_intent in chain.activities.items():
+        activity_order = by_intent.get("order")
+        if activity_order is None:
+            continue
+        await client.create(
+            "Task",
+            {
+                "resourceType": "Task",
+                "status": "ready",
+                "intent": "order",
+                "identifier": [activity_tag(workspace.plan_definition_id, action_id, activity_id)],
+                "basedOn": [{"reference": f"ServiceRequest/{activity_order['id']}"}],
+                "focus": {"reference": f"ServiceRequest/{activity_order['id']}"},
+                "for": {"reference": f"Patient/{workspace.patient_id}"},
+                "encounter": {"reference": f"Encounter/{created_encounter['id']}"},
+                "description": _request_text(activity_order),
+            },
+        )
+    return await schedule_payload(client, workspace)
