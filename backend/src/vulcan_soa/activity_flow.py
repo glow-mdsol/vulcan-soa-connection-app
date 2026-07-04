@@ -477,3 +477,26 @@ async def complete(
 
     final_chains = await load_chains(client, workspace.patient_id, workspace.plan_definition_id)
     return schedule_response(state, visits=visit_details(final_chains))
+
+
+async def revoke_open_workflow(client: FhirClient, patient_id: str, plan_definition_id: str) -> None:
+    chains = await load_chains(client, patient_id, plan_definition_id)
+    for chain in chains.values():
+        for request in _all_requests(chain):
+            if request.get("status") == "active":
+                request["status"] = "revoked"
+                await client.update(
+                    "ServiceRequest", request["id"], request, if_match=if_match_header(request)
+                )
+        if chain.appointment is not None and chain.appointment.get("status") in ("proposed", "booked"):
+            chain.appointment["status"] = "cancelled"
+            await client.update(
+                "Appointment",
+                chain.appointment["id"],
+                chain.appointment,
+                if_match=if_match_header(chain.appointment),
+            )
+        for task in chain.tasks:
+            if task.get("status") in ("ready", "in-progress"):
+                task["status"] = "cancelled"
+                await client.update("Task", task["id"], task, if_match=if_match_header(task))

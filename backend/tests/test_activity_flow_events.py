@@ -4,7 +4,7 @@ import httpx
 import pytest
 import respx
 
-from vulcan_soa.activity_flow import complete, complete_task, perform
+from vulcan_soa.activity_flow import complete, complete_task, perform, revoke_open_workflow
 from vulcan_soa.fhir_client import FhirClient
 
 SUBJECT = {
@@ -323,3 +323,43 @@ async def test_complete_with_transition_choice_materializes_chosen_proposal():
     assert payload["identifier"] == [{"system": "urn:vulcan-soa:plan-action", "value": "pd-1#E3"}]
     assert result["ambiguous"] is True
     assert {s["actionId"] for s in result["nextSteps"]} == {"E2", "E3"}
+
+
+@respx.mock
+async def test_revoke_open_workflow_revokes_and_cancels():
+    active_order = dict(VISIT_ORDER, meta={"versionId": "1"})
+    proposed_appointment = {
+        "resourceType": "Appointment", "id": "appt-1", "status": "proposed",
+        "identifier": [VISIT_TAG], "meta": {"versionId": "1"},
+        "participant": [{"actor": {"reference": "Patient/p-1"}, "status": "needs-action"}],
+    }
+    ready_task = dict(READY_TASK)
+    respx.get("http://aidbox.test/fhir/ServiceRequest").mock(
+        return_value=httpx.Response(200, json=_bundle(active_order))
+    )
+    respx.get("http://aidbox.test/fhir/Appointment").mock(
+        return_value=httpx.Response(200, json=_bundle(proposed_appointment))
+    )
+    respx.get("http://aidbox.test/fhir/Encounter").mock(
+        return_value=httpx.Response(200, json=_bundle())
+    )
+    respx.get("http://aidbox.test/fhir/Task").mock(
+        return_value=httpx.Response(200, json=_bundle(ready_task))
+    )
+    request_update = respx.put("http://aidbox.test/fhir/ServiceRequest/sr-visit-order").mock(
+        return_value=httpx.Response(200, json=dict(active_order, status="revoked"))
+    )
+    appointment_update = respx.put("http://aidbox.test/fhir/Appointment/appt-1").mock(
+        return_value=httpx.Response(200, json=dict(proposed_appointment, status="cancelled"))
+    )
+    task_update = respx.put("http://aidbox.test/fhir/Task/t-1").mock(
+        return_value=httpx.Response(200, json=dict(ready_task, status="cancelled"))
+    )
+
+    client = FhirClient(base_url="http://aidbox.test/fhir", access_token="tok")
+    await revoke_open_workflow(client, "p-1", "pd-1")
+    await client.close()
+
+    assert json.loads(request_update.calls.last.request.content)["status"] == "revoked"
+    assert json.loads(appointment_update.calls.last.request.content)["status"] == "cancelled"
+    assert json.loads(task_update.calls.last.request.content)["status"] == "cancelled"
