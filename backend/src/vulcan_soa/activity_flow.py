@@ -297,3 +297,54 @@ async def promote(client: FhirClient, subject_id: str, action_id: str, to_intent
         await _complete_request(client, previous_activity)
 
     return await schedule_payload(client, workspace)
+
+
+async def schedule_visit(client: FhirClient, subject_id: str, action_id: str) -> dict:
+    workspace = await _load_workspace(client, subject_id)
+    chain = _require_phase(workspace.chains.get(action_id), action_id, "ordered")
+    order = chain.requests["order"]
+    await client.create(
+        "Appointment",
+        {
+            "resourceType": "Appointment",
+            "status": "proposed",
+            "identifier": [visit_tag(workspace.plan_definition_id, action_id)],
+            "basedOn": [{"reference": f"ServiceRequest/{order['id']}"}],
+            "participant": [
+                {"actor": {"reference": f"Patient/{workspace.patient_id}"}, "status": "needs-action"},
+                {"actor": {"reference": f"Practitioner/{SITE_PRACTITIONER_ID}"}, "status": "needs-action"},
+            ],
+        },
+    )
+    return await schedule_payload(client, workspace)
+
+
+async def respond(
+    client: FhirClient, subject_id: str, action_id: str, participant: str, response: str
+) -> dict:
+    workspace = await _load_workspace(client, subject_id)
+    chain = _require_phase(workspace.chains.get(action_id), action_id, "scheduled")
+    appointment = chain.appointment
+    actor_reference = (
+        f"Patient/{workspace.patient_id}"
+        if participant == "patient"
+        else f"Practitioner/{SITE_PRACTITIONER_ID}"
+    )
+    await client.create(
+        "AppointmentResponse",
+        {
+            "resourceType": "AppointmentResponse",
+            "appointment": {"reference": f"Appointment/{appointment['id']}"},
+            "actor": {"reference": actor_reference},
+            "participantStatus": response,
+        },
+    )
+    for slot in appointment.get("participant", []):
+        if slot.get("actor", {}).get("reference") == actor_reference:
+            slot["status"] = response
+    if all(slot.get("status") == "accepted" for slot in appointment.get("participant", [])):
+        appointment["status"] = "booked"
+    await client.update(
+        "Appointment", appointment["id"], appointment, if_match=if_match_header(appointment)
+    )
+    return await schedule_payload(client, workspace)
