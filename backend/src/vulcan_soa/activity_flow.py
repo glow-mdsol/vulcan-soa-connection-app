@@ -8,8 +8,10 @@ tracked by the shared action-tag identifier on every resource in the chain.
 from dataclasses import dataclass, field
 
 from vulcan_soa.fhir_client import FhirClient
+from vulcan_soa.scheduling import load_protocol_graph_for_subject, schedule_response
 from vulcan_soa.soa_engine.conditions import SubjectContext
-from vulcan_soa.soa_engine.graph import VisitNode
+from vulcan_soa.soa_engine.engine import resolve_schedule_state
+from vulcan_soa.soa_engine.graph import ProtocolGraph, VisitNode
 
 ACTION_TAG_SYSTEM = "urn:vulcan-soa:plan-action"
 GROUP_ID_SYSTEM = "urn:vulcan-soa:promotion"
@@ -215,3 +217,83 @@ async def _load_activity_definitions(client: FhirClient, node: VisitNode) -> lis
         if uri.startswith("ActivityDefinition/"):
             definitions.append(await client.read("ActivityDefinition", uri.split("/", 1)[1]))
     return definitions
+
+
+_PROMOTIONS = {"plan": ("proposed", "proposal"), "order": ("planned", "plan")}
+
+
+@dataclass
+class _SubjectWorkspace:
+    subject: dict
+    graph: ProtocolGraph
+    plan_definition_id: str
+    patient_id: str
+    chains: dict[str, VisitChain]
+
+
+async def _load_workspace(client: FhirClient, subject_id: str) -> _SubjectWorkspace:
+    subject = await client.read("ResearchSubject", subject_id)
+    graph, plan_definition_id = await load_protocol_graph_for_subject(client, subject)
+    patient_id = subject["subject"]["reference"].split("/", 1)[1]
+    chains = await load_chains(client, patient_id, plan_definition_id)
+    return _SubjectWorkspace(subject, graph, plan_definition_id, patient_id, chains)
+
+
+def _require_phase(chain: VisitChain | None, action_id: str, expected: str) -> VisitChain:
+    if chain is None:
+        raise ValueError(f"No materialized visit found for action {action_id}")
+    if chain.phase != expected:
+        raise PhaseError(f"visit {action_id} is in phase '{chain.phase}', expected '{expected}'")
+    return chain
+
+
+async def _complete_request(client: FhirClient, request: dict) -> None:
+    request["status"] = "completed"
+    await client.update("ServiceRequest", request["id"], request, if_match=if_match_header(request))
+
+
+async def schedule_payload(client: FhirClient, workspace: _SubjectWorkspace) -> dict:
+    chains = await load_chains(client, workspace.patient_id, workspace.plan_definition_id)
+    state = resolve_schedule_state(workspace.graph, context_from_chains(workspace.subject, chains))
+    return schedule_response(state, visits=visit_details(chains))
+
+
+def _next_request(previous: dict, intent: str, group: dict, based_on: list[dict]) -> dict:
+    request = {
+        "resourceType": "ServiceRequest",
+        "status": "active",
+        "intent": intent,
+        "subject": previous["subject"],
+        "identifier": previous["identifier"],
+        "groupIdentifier": group,
+        "basedOn": [{"reference": f"ServiceRequest/{r['id']}"} for r in based_on],
+        "code": previous.get("code"),
+    }
+    if previous.get("instantiatesUri"):
+        request["instantiatesUri"] = previous["instantiatesUri"]
+    return request
+
+
+async def promote(client: FhirClient, subject_id: str, action_id: str, to_intent: str) -> dict:
+    required_phase, previous_intent = _PROMOTIONS[to_intent]
+    workspace = await _load_workspace(client, subject_id)
+    chain = _require_phase(workspace.chains.get(action_id), action_id, required_phase)
+
+    group = group_identifier(workspace.plan_definition_id, action_id, to_intent)
+    previous_visit = chain.requests[previous_intent]
+    created_visit = await client.create(
+        "ServiceRequest", _next_request(previous_visit, to_intent, group, based_on=[previous_visit])
+    )
+    await _complete_request(client, previous_visit)
+
+    for by_intent in chain.activities.values():
+        previous_activity = by_intent.get(previous_intent)
+        if previous_activity is None:
+            continue
+        await client.create(
+            "ServiceRequest",
+            _next_request(previous_activity, to_intent, group, based_on=[previous_activity, created_visit]),
+        )
+        await _complete_request(client, previous_activity)
+
+    return await schedule_payload(client, workspace)
