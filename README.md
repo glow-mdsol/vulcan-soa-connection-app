@@ -195,6 +195,9 @@ src/
 
 ## SMART launch flow
 
+Full client-registration and configuration guide (local Docker and remote/Connectathon
+Aidbox): [docs/smart-on-fhir-setup.md](docs/smart-on-fhir-setup.md).
+
 ```
 EHR  →  GET /launch?iss=&launch=  →  Aidbox /authorize  →  GET /callback
      ←  session cookie (HttpOnly)  ←  token exchange
