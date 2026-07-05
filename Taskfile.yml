@@ -123,7 +123,7 @@ tasks:
     cmds:
       - |
         source .venv/bin/activate
-        ENV_FILE={{.ENV_FILE}} RUN_INTEGRATION_TESTS=1 pytest tests/test_golden_path_integration.py -v
+        ENV_FILE={{.ENV_FILE}} RUN_INTEGRATION_TESTS=1 pytest tests/test_golden_path_integration.py tests/test_cpg_flow_integration.py -v
     preconditions:
       - sh: test -f .venv/bin/activate
         msg: "Run 'task backend:install' first"
