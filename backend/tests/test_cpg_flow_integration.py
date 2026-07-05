@@ -81,6 +81,15 @@ async def test_cpg_lifecycle_for_first_usdm_visit(client):
 
     after_complete = await complete(client, subject_id, action_id, None)
     assert action_id in after_complete["completed"]
+    # Regression for the stale pre-materialization state: the next visit's
+    # freshly materialized proposal must appear in `current` (unless the next
+    # step was ambiguous, in which case nothing is materialized yet).
+    if not after_complete["ambiguous"]:
+        assert after_complete["current"], "the next visit should be current after completion"
+        for step in after_complete["nextSteps"]:
+            assert step["actionId"] not in after_complete["current"]
+        materialized = set(after_complete["current"]) - {action_id}
+        assert materialized, "a next-step proposal should be materialized into current"
 
     chains = await load_chains(client, PATIENT_ID, PROTOCOL_PD_ID)
     assert chains[action_id].phase == "completed"

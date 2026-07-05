@@ -70,6 +70,13 @@ class VisitChain:
     def phase(self) -> str:
         if self.encounter is not None and self.encounter.get("status") == "completed":
             return "completed"
+        # Terminal (post-withdrawal) states: a cancelled appointment or a revoked
+        # visit-level request means the workflow was torn down. Report "revoked"
+        # so the UI shows no actionable gates and respond() can't book it.
+        if self.appointment is not None and self.appointment.get("status") == "cancelled":
+            return "revoked"
+        if any(request.get("status") == "revoked" for request in self.requests.values()):
+            return "revoked"
         if self.encounter is not None:
             return "performing"
         if self.appointment is not None and self.appointment.get("status") == "booked":
@@ -462,34 +469,59 @@ async def complete(
     client: FhirClient, subject_id: str, action_id: str, transition_choice: str | None
 ) -> dict:
     workspace = await _load_workspace(client, subject_id)
-    chain = _require_phase(workspace.chains.get(action_id), action_id, "performing")
+    chain = workspace.chains.get(action_id)
 
-    for task in chain.tasks:
-        await _complete_task_resource(client, workspace.patient_id, chain, task)
-    for request in _all_requests(chain):
-        if request.get("status") == "active":
-            await _complete_request(client, request)
+    # Re-entry: the frontend's ambiguous flow calls complete() a second time with
+    # the chosen branch. The first call already completed the Encounter (phase is
+    # now "completed"), so skip the sweep/request/encounter mutation and go
+    # straight to recording the chosen branch.
+    reentry = chain is not None and chain.phase == "completed" and transition_choice is not None
+    if not reentry:
+        if chain is not None and chain.phase == "completed" and transition_choice is None:
+            raise PhaseError(f"visit {action_id} is in phase 'completed', expected 'performing'")
+        chain = _require_phase(chain, action_id, "performing")
 
-    encounter = chain.encounter
-    encounter["status"] = "completed"
-    await client.update("Encounter", encounter["id"], encounter, if_match=if_match_header(encounter))
+        for task in chain.tasks:
+            await _complete_task_resource(client, workspace.patient_id, chain, task)
+        for request in _all_requests(chain):
+            if request.get("status") == "active":
+                await _complete_request(client, request)
+
+        encounter = chain.encounter
+        encounter["status"] = "completed"
+        await client.update(
+            "Encounter", encounter["id"], encounter, if_match=if_match_header(encounter)
+        )
 
     # Re-read subject so we pick up any withdrawal that happened between visits.
     subject = await client.read("ResearchSubject", subject_id)
     chains = await load_chains(client, workspace.patient_id, workspace.plan_definition_id)
     state = resolve_schedule_state(workspace.graph, context_from_chains(subject, chains))
 
+    def unmaterialized(step_action_id: str) -> bool:
+        return step_action_id not in chains
+
     if len(state.next_steps) == 1:
         node = workspace.graph.nodes[state.next_steps[0].action_id]
-        await materialize_proposal(client, workspace.patient_id, workspace.plan_definition_id, node)
+        if unmaterialized(node.action_id):
+            await materialize_proposal(
+                client, workspace.patient_id, workspace.plan_definition_id, node
+            )
     elif len(state.next_steps) > 1 and transition_choice is not None:
         chosen = next((s for s in state.next_steps if s.action_id == transition_choice), None)
-        if chosen is not None:
+        if chosen is not None and unmaterialized(chosen.action_id):
             node = workspace.graph.nodes[chosen.action_id]
-            await materialize_proposal(client, workspace.patient_id, workspace.plan_definition_id, node)
+            await materialize_proposal(
+                client, workspace.patient_id, workspace.plan_definition_id, node
+            )
 
+    # Recompute the returned state from the FINAL chains so a freshly materialized
+    # proposal is reflected in `current` (otherwise the UI dead-ends).
     final_chains = await load_chains(client, workspace.patient_id, workspace.plan_definition_id)
-    return schedule_response(state, visits=visit_details(final_chains))
+    final_state = resolve_schedule_state(
+        workspace.graph, context_from_chains(subject, final_chains)
+    )
+    return schedule_response(final_state, visits=visit_details(final_chains))
 
 
 async def revoke_open_workflow(client: FhirClient, patient_id: str, plan_definition_id: str) -> None:

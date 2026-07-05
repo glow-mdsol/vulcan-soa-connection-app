@@ -4,7 +4,15 @@ import httpx
 import pytest
 import respx
 
-from vulcan_soa.activity_flow import complete, complete_task, perform, revoke_open_workflow
+from vulcan_soa.activity_flow import (
+    PhaseError,
+    VisitChain,
+    complete,
+    complete_task,
+    perform,
+    respond,
+    revoke_open_workflow,
+)
 from vulcan_soa.fhir_client import FhirClient
 
 SUBJECT = {
@@ -276,6 +284,13 @@ AMBIGUOUS_PROTOCOL_PD = {
     ],
 }
 
+E3_PROPOSAL = {
+    "resourceType": "ServiceRequest", "id": "sr-e3", "intent": "proposal", "status": "active",
+    "subject": {"reference": "Patient/p-1"},
+    "identifier": [{"system": "urn:vulcan-soa:plan-action", "value": "pd-1#E3"}],
+    "code": {"concept": {"text": "Branch B"}},
+}
+
 
 @respx.mock
 async def test_complete_with_transition_choice_materializes_chosen_proposal():
@@ -288,8 +303,14 @@ async def test_complete_with_transition_choice_materializes_chosen_proposal():
     respx.get("http://aidbox.test/fhir/PlanDefinition/pd-1").mock(
         return_value=httpx.Response(200, json=AMBIGUOUS_PROTOCOL_PD)
     )
+    # The third ServiceRequest search (the final recompute) sees the freshly
+    # materialized E3 proposal alongside the completed E1 order.
     respx.get("http://aidbox.test/fhir/ServiceRequest").mock(
-        return_value=httpx.Response(200, json=_bundle(VISIT_ORDER))
+        side_effect=[
+            httpx.Response(200, json=_bundle(VISIT_ORDER)),
+            httpx.Response(200, json=_bundle(VISIT_ORDER)),
+            httpx.Response(200, json=_bundle(VISIT_ORDER, E3_PROPOSAL)),
+        ]
     )
     respx.get("http://aidbox.test/fhir/Appointment").mock(
         return_value=httpx.Response(200, json=_bundle(BOOKED_APPOINTMENT))
@@ -321,8 +342,108 @@ async def test_complete_with_transition_choice_materializes_chosen_proposal():
     payload = json.loads(create_route.calls.last.request.content)
     assert payload["intent"] == "proposal"
     assert payload["identifier"] == [{"system": "urn:vulcan-soa:plan-action", "value": "pd-1#E3"}]
-    assert result["ambiguous"] is True
-    assert {s["actionId"] for s in result["nextSteps"]} == {"E2", "E3"}
+    # The returned state is recomputed AFTER materializing E3: it is now current,
+    # so only E2 remains as a next step and the choice is no longer ambiguous.
+    assert result["ambiguous"] is False
+    assert "E3" in result["current"]
+    assert {s["actionId"] for s in result["nextSteps"]} == {"E2"}
+
+
+@respx.mock
+async def test_complete_ambiguous_then_choice_two_calls():
+    # Regression for the ambiguous-choice re-entry: the first /complete returns
+    # ambiguous with nothing materialized; the second /complete (with the chosen
+    # branch) must succeed even though the Encounter is already completed.
+    respx.get("http://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json=SUBJECT)
+    )
+    respx.get("http://aidbox.test/fhir/ResearchStudy/study-1").mock(
+        return_value=httpx.Response(200, json=STUDY)
+    )
+    respx.get("http://aidbox.test/fhir/PlanDefinition/pd-1").mock(
+        return_value=httpx.Response(200, json=AMBIGUOUS_PROTOCOL_PD)
+    )
+    respx.get("http://aidbox.test/fhir/ServiceRequest").mock(
+        side_effect=[
+            httpx.Response(200, json=_bundle(VISIT_ORDER)),  # call 1: load_workspace
+            httpx.Response(200, json=_bundle(VISIT_ORDER)),  # call 1: reload
+            httpx.Response(200, json=_bundle(VISIT_ORDER)),  # call 1: final
+            httpx.Response(200, json=_bundle(VISIT_ORDER)),  # call 2: load_workspace
+            httpx.Response(200, json=_bundle(VISIT_ORDER)),  # call 2: reload
+            httpx.Response(200, json=_bundle(VISIT_ORDER, E3_PROPOSAL)),  # call 2: final
+        ]
+    )
+    respx.get("http://aidbox.test/fhir/Appointment").mock(
+        return_value=httpx.Response(200, json=_bundle(BOOKED_APPOINTMENT))
+    )
+    # First GET (call 1 load_workspace) is in-progress; every later load sees the
+    # completed Encounter, which is what drives the re-entry branch on call 2.
+    respx.get("http://aidbox.test/fhir/Encounter").mock(
+        side_effect=[
+            httpx.Response(200, json=_bundle(IN_PROGRESS_ENCOUNTER)),
+            *[
+                httpx.Response(200, json=_bundle(dict(IN_PROGRESS_ENCOUNTER, status="completed")))
+                for _ in range(5)
+            ],
+        ]
+    )
+    respx.get("http://aidbox.test/fhir/Task").mock(
+        return_value=httpx.Response(200, json=_bundle())
+    )
+    respx.put("http://aidbox.test/fhir/ServiceRequest/sr-visit-order").mock(
+        return_value=httpx.Response(200, json=dict(VISIT_ORDER, status="completed"))
+    )
+    respx.put("http://aidbox.test/fhir/Encounter/enc-1").mock(
+        return_value=httpx.Response(200, json=dict(IN_PROGRESS_ENCOUNTER, status="completed"))
+    )
+    create_route = respx.post("http://aidbox.test/fhir/ServiceRequest").mock(
+        return_value=httpx.Response(201, json={"resourceType": "ServiceRequest", "id": "sr-e3"})
+    )
+
+    client = FhirClient(base_url="http://aidbox.test/fhir", access_token="tok")
+
+    first = await complete(client, "subj-1", "E1", None)
+    assert first["ambiguous"] is True
+    assert {s["actionId"] for s in first["nextSteps"]} == {"E2", "E3"}
+    assert create_route.call_count == 0  # nothing materialized yet
+
+    # Second call must not raise PhaseError even though the Encounter is completed.
+    second = await complete(client, "subj-1", "E1", "E3")
+    await client.close()
+
+    assert create_route.call_count == 1
+    payload = json.loads(create_route.calls.last.request.content)
+    assert payload["identifier"] == [{"system": "urn:vulcan-soa:plan-action", "value": "pd-1#E3"}]
+    assert second["ambiguous"] is False
+    assert "E3" in second["current"]
+
+
+def test_visit_chain_with_revoked_order_derives_revoked():
+    chain = VisitChain(action_id="E1", requests={"order": dict(VISIT_ORDER, status="revoked")})
+    assert chain.phase == "revoked"
+
+
+@respx.mock
+async def test_respond_on_cancelled_appointment_raises_phase_error():
+    cancelled_appointment = dict(BOOKED_APPOINTMENT, status="cancelled")
+    _mock_subject_reads()
+    respx.get("http://aidbox.test/fhir/ServiceRequest").mock(
+        return_value=httpx.Response(200, json=_bundle(VISIT_ORDER))
+    )
+    respx.get("http://aidbox.test/fhir/Appointment").mock(
+        return_value=httpx.Response(200, json=_bundle(cancelled_appointment))
+    )
+    respx.get("http://aidbox.test/fhir/Encounter").mock(
+        return_value=httpx.Response(200, json=_bundle())
+    )
+    respx.get("http://aidbox.test/fhir/Task").mock(
+        return_value=httpx.Response(200, json=_bundle())
+    )
+
+    client = FhirClient(base_url="http://aidbox.test/fhir", access_token="tok")
+    with pytest.raises(PhaseError):
+        await respond(client, "subj-1", "E1", "patient", "accepted")
+    await client.close()
 
 
 @respx.mock
