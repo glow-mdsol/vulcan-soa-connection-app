@@ -25,6 +25,38 @@ PLAN_DEFINITION = {
     "id": "plan-1",
     "action": [{"id": "screening-1", "title": "Screening"}],
 }
+VISIT_TAG = {"system": "urn:vulcan-soa:plan-action", "value": "plan-1#screening-1"}
+VISIT_ORDER = {
+    "resourceType": "ServiceRequest",
+    "id": "sr-visit-order",
+    "intent": "order",
+    "status": "active",
+    "subject": {"reference": "Patient/patient-1"},
+    "identifier": [VISIT_TAG],
+    "code": {"concept": {"text": "Screening"}},
+}
+BOOKED_APPOINTMENT = {
+    "resourceType": "Appointment",
+    "id": "appt-1",
+    "status": "booked",
+    "identifier": [VISIT_TAG],
+    "participant": [
+        {"actor": {"reference": "Patient/patient-1"}, "status": "accepted"},
+        {"actor": {"reference": "Practitioner/site-coordinator-demo"}, "status": "accepted"},
+    ],
+}
+IN_PROGRESS_ENCOUNTER = {
+    "resourceType": "Encounter",
+    "id": "enc-1",
+    "status": "in-progress",
+    "meta": {"versionId": "2"},
+    "subject": {"reference": "Patient/patient-1"},
+    "identifier": [VISIT_TAG],
+}
+
+
+def _bundle(*resources: dict) -> dict:
+    return {"resourceType": "Bundle", "entry": [{"resource": r} for r in resources]}
 
 
 def _build_test_app() -> FastAPI:
@@ -44,9 +76,10 @@ def test_get_schedule_returns_resolved_state():
     respx.get("https://aidbox.test/fhir/PlanDefinition/plan-1").mock(
         return_value=httpx.Response(200, json=PLAN_DEFINITION)
     )
-    respx.get("https://aidbox.test/fhir/Encounter").mock(
-        return_value=httpx.Response(200, json={"resourceType": "Bundle"})
-    )
+    for resource_type in ("ServiceRequest", "Appointment", "Encounter", "Task"):
+        respx.get(f"https://aidbox.test/fhir/{resource_type}").mock(
+            return_value=httpx.Response(200, json=_bundle())
+        )
 
     app = _build_test_app()
     app.dependency_overrides[get_fhir_client] = lambda: FhirClient(
@@ -57,9 +90,11 @@ def test_get_schedule_returns_resolved_state():
     response = test_client.get("/api/research-subjects/subj-1/schedule")
 
     assert response.status_code == 200
-    assert response.json()["nextSteps"] == [
+    body = response.json()
+    assert body["nextSteps"] == [
         {"actionId": "screening-1", "title": "Screening", "transitionType": None}
     ]
+    assert body["visits"] == {}
 
 
 @respx.mock
@@ -112,21 +147,27 @@ def test_complete_visit_route_marks_finished_and_returns_schedule():
     respx.get("https://aidbox.test/fhir/PlanDefinition/plan-1").mock(
         return_value=httpx.Response(200, json=PLAN_DEFINITION)
     )
-    encounter = {
-        "resourceType": "Encounter",
-        "id": "enc-1",
-        "status": "planned",
-        "identifier": [{"system": "urn:vulcan-soa:plan-action", "value": "plan-1#screening-1"}],
-    }
-    finished_encounter = dict(encounter, status="completed")
+    respx.get("https://aidbox.test/fhir/ServiceRequest").mock(
+        return_value=httpx.Response(200, json=_bundle(VISIT_ORDER))
+    )
+    respx.get("https://aidbox.test/fhir/Appointment").mock(
+        return_value=httpx.Response(200, json=_bundle(BOOKED_APPOINTMENT))
+    )
+    respx.get("https://aidbox.test/fhir/Task").mock(
+        return_value=httpx.Response(200, json=_bundle())
+    )
     respx.get("https://aidbox.test/fhir/Encounter").mock(
         side_effect=[
-            httpx.Response(200, json={"resourceType": "Bundle", "entry": [{"resource": encounter}]}),
-            httpx.Response(200, json={"resourceType": "Bundle", "entry": [{"resource": finished_encounter}]}),
+            httpx.Response(200, json=_bundle(IN_PROGRESS_ENCOUNTER)),
+            httpx.Response(200, json=_bundle(dict(IN_PROGRESS_ENCOUNTER, status="completed"))),
+            httpx.Response(200, json=_bundle(dict(IN_PROGRESS_ENCOUNTER, status="completed"))),
         ]
     )
+    respx.put("https://aidbox.test/fhir/ServiceRequest/sr-visit-order").mock(
+        return_value=httpx.Response(200, json=dict(VISIT_ORDER, status="completed"))
+    )
     respx.put("https://aidbox.test/fhir/Encounter/enc-1").mock(
-        return_value=httpx.Response(200, json=finished_encounter)
+        return_value=httpx.Response(200, json=dict(IN_PROGRESS_ENCOUNTER, status="completed"))
     )
 
     app = _build_test_app()
@@ -140,4 +181,6 @@ def test_complete_visit_route_marks_finished_and_returns_schedule():
     )
 
     assert response.status_code == 200
-    assert response.json()["completed"] == ["screening-1"]
+    body = response.json()
+    assert body["completed"] == ["screening-1"]
+    assert body["visits"]["screening-1"]["phase"] == "completed"

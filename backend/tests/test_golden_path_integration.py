@@ -4,10 +4,11 @@ from pathlib import Path
 import pytest
 
 from scripts.load_fixtures import load_directory
+from vulcan_soa.activity_flow import complete
 from vulcan_soa.config import Settings
 from vulcan_soa.enrollment import enroll
 from vulcan_soa.fhir_client import FhirClient
-from vulcan_soa.tracking import complete_visit, withdraw_subject
+from vulcan_soa.tracking import withdraw_subject
 
 IG_OUTPUT_DIR = Path(
     os.environ.get(
@@ -49,13 +50,13 @@ async def test_golden_path_enroll_progress_withdraw_ambiguous(client):
     subject_id = enroll_result["researchSubjectId"]
     assert enroll_result["schedule"]["nextSteps"] == []
 
-    after_screening = await complete_visit(client, subject_id, SCREENING_ID, None)
+    after_screening = await complete(client, subject_id, SCREENING_ID, None)
     assert [s["actionId"] for s in after_screening["nextSteps"]] == [TREATMENT_DAY1_ID]
     assert after_screening["ambiguous"] is False
 
     await withdraw_subject(client, subject_id)
 
-    after_treatment_day1 = await complete_visit(client, subject_id, TREATMENT_DAY1_ID, None)
+    after_treatment_day1 = await complete(client, subject_id, TREATMENT_DAY1_ID, None)
     target_ids = {s["actionId"] for s in after_treatment_day1["nextSteps"]}
     assert target_ids == {DAY7_ID, EOS_ID}
     assert after_treatment_day1["ambiguous"] is True

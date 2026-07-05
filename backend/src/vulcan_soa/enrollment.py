@@ -1,7 +1,8 @@
 import datetime
 
+from vulcan_soa.activity_flow import materialize_proposal
 from vulcan_soa.fhir_client import FhirClient
-from vulcan_soa.scheduling import load_protocol_graph, materialize_visit, schedule_response
+from vulcan_soa.scheduling import load_protocol_graph, schedule_response
 from vulcan_soa.soa_engine.conditions import SubjectContext
 from vulcan_soa.soa_engine.engine import resolve_schedule_state
 
@@ -42,7 +43,7 @@ async def enroll(client: FhirClient, study_id: str, patient_id: str) -> dict:
     initial_state = resolve_schedule_state(graph, initial_context)
     for step in initial_state.next_steps:
         node = graph.nodes[step.action_id]
-        await materialize_visit(client, patient_id, plan_definition_id, node)
+        await materialize_proposal(client, patient_id, plan_definition_id, node)
 
     materialized_ids = frozenset(step.action_id for step in initial_state.next_steps)
     post_enroll_state = resolve_schedule_state(
@@ -52,7 +53,8 @@ async def enroll(client: FhirClient, study_id: str, patient_id: str) -> dict:
         ),
     )
 
+    visits = {step.action_id: {"phase": "proposed"} for step in initial_state.next_steps}
     return {
         "researchSubjectId": created["id"],
-        "schedule": schedule_response(post_enroll_state),
+        "schedule": schedule_response(post_enroll_state, visits=visits),
     }

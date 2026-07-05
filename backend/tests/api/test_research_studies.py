@@ -73,8 +73,8 @@ def test_enroll_patient_calls_enrollment_and_returns_schedule():
     respx.post("https://aidbox.test/fhir/ResearchSubject").mock(
         return_value=httpx.Response(201, json={"resourceType": "ResearchSubject", "id": "subj-1"})
     )
-    respx.post("https://aidbox.test/fhir/Encounter").mock(
-        return_value=httpx.Response(201, json={"resourceType": "Encounter", "id": "enc-1"})
+    respx.post("https://aidbox.test/fhir/ServiceRequest").mock(
+        return_value=httpx.Response(201, json={"resourceType": "ServiceRequest", "id": "sr-1"})
     )
 
     app = _build_test_app()
