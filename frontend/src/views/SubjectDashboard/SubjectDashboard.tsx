@@ -1,8 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { completeVisit, getSchedule, withdrawSubject } from "../../api/client";
+import {
+  completeTask,
+  completeVisit,
+  getSchedule,
+  performVisit,
+  promoteVisit,
+  respondToAppointment,
+  scheduleVisit,
+  withdrawSubject,
+} from "../../api/client";
 import type { NextStep, Schedule } from "../../api/types";
+import VisitCard from "./VisitCard";
 
 interface PendingChoice {
   actionId: string;
@@ -59,6 +69,14 @@ export default function SubjectDashboard() {
     }
   }
 
+  async function runGate(action: () => Promise<Schedule>, failure: string) {
+    try {
+      setSchedule(await action());
+    } catch {
+      setError(failure);
+    }
+  }
+
   async function handleWithdraw() {
     if (!subjectId) {
       return;
@@ -97,10 +115,25 @@ export default function SubjectDashboard() {
         <h2>Current</h2>
         <ul>
           {schedule.current.map((actionId) => (
-            <li key={actionId}>
-              {actionId}
-              <button onClick={() => handleComplete(actionId)}>Mark complete</button>
-            </li>
+            <VisitCard
+              key={actionId}
+              actionId={actionId}
+              detail={schedule.visits[actionId]}
+              onPlan={() => runGate(() => promoteVisit(subjectId!, actionId, "plan"), "Could not accept the proposal.")}
+              onOrder={() => runGate(() => promoteVisit(subjectId!, actionId, "order"), "Could not authorize the visit.")}
+              onSchedule={() => runGate(() => scheduleVisit(subjectId!, actionId), "Could not schedule the visit.")}
+              onRespond={(participant) =>
+                runGate(
+                  () => respondToAppointment(subjectId!, actionId, participant, "accepted"),
+                  "Could not record the response.",
+                )
+              }
+              onPerform={() => runGate(() => performVisit(subjectId!, actionId), "Could not start the visit.")}
+              onCompleteTask={(taskId) =>
+                runGate(() => completeTask(subjectId!, actionId, taskId), "Could not complete the task.")
+              }
+              onCompleteVisit={() => handleComplete(actionId)}
+            />
           ))}
         </ul>
       </section>

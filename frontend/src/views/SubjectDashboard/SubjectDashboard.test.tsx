@@ -3,7 +3,16 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { completeVisit, getSchedule, withdrawSubject } from "../../api/client";
+import {
+  completeTask,
+  completeVisit,
+  getSchedule,
+  performVisit,
+  promoteVisit,
+  respondToAppointment,
+  scheduleVisit,
+  withdrawSubject,
+} from "../../api/client";
 import SubjectDashboard from "./SubjectDashboard";
 
 vi.mock("../../api/client");
@@ -23,6 +32,11 @@ describe("SubjectDashboard", () => {
     vi.mocked(getSchedule).mockReset();
     vi.mocked(completeVisit).mockReset();
     vi.mocked(withdrawSubject).mockReset();
+    vi.mocked(promoteVisit).mockReset();
+    vi.mocked(scheduleVisit).mockReset();
+    vi.mocked(respondToAppointment).mockReset();
+    vi.mocked(performVisit).mockReset();
+    vi.mocked(completeTask).mockReset();
   });
 
   it("shows a decision prompt when completing a visit is ambiguous, then schedules the chosen step", async () => {
@@ -31,7 +45,7 @@ describe("SubjectDashboard", () => {
       current: ["treatment-1"],
       nextSteps: [],
       ambiguous: false,
-      visits: {},
+      visits: { "treatment-1": { phase: "performing", tasks: [] } },
     });
     vi.mocked(completeVisit).mockResolvedValueOnce({
       completed: ["screening-1", "treatment-1"],
@@ -53,7 +67,7 @@ describe("SubjectDashboard", () => {
 
     renderAtSubject("subj-1");
 
-    const completeButton = await screen.findByRole("button", { name: "Mark complete" });
+    const completeButton = await screen.findByRole("button", { name: "Complete visit" });
     await userEvent.click(completeButton);
 
     expect(await screen.findByText("Decision needed")).toBeInTheDocument();
@@ -71,7 +85,7 @@ describe("SubjectDashboard", () => {
       current: ["screening-1"],
       nextSteps: [],
       ambiguous: false,
-      visits: {},
+      visits: { "screening-1": { phase: "performing", tasks: [] } },
     });
     vi.mocked(withdrawSubject).mockResolvedValue({ id: "subj-1", subjectState: "withdrawn" });
 
