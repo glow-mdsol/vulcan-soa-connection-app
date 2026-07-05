@@ -6,6 +6,7 @@ vars:
   DOCKER_COMPOSE: docker/docker-compose.yml
   ENV_FILE: '{{.ENV_FILE | default ".env.local"}}'
   VULCAN_IG_OUTPUT_DIR: '{{.VULCAN_IG_OUTPUT_DIR | default (printf "%s/Documents/Devel/hl7/Vulcan-schedule-ig/output" .HOME)}}'
+  SOA_IG_RESOURCES_DIR: '{{.SOA_IG_RESOURCES_DIR | default (printf "%s/Documents/Devel/phuseorg/fhir-schedule-of-activities-ig/fsh-generated/resources" .HOME)}}'
 
 # ─── Aidbox / Docker ────────────────────────────────────────────────────────
 
@@ -64,6 +65,20 @@ tasks:
       - sh: test -f .venv/bin/activate
         msg: "Run 'task backend:install' first"
 
+  fixtures:load-soa-ig:
+    desc: Load the WIP PhUSE SoA IG (fsh-generated/resources) into Aidbox and validate the USDM protocol.
+    dir: "{{.BACKEND_DIR}}"
+    cmds:
+      - |
+        source .venv/bin/activate
+        ENV_FILE={{.ENV_FILE}} python scripts/load_fixtures.py "{{.SOA_IG_RESOURCES_DIR}}"
+        ENV_FILE={{.ENV_FILE}} python scripts/validate_protocol.py H2Q-MC-LZZT-ProtocolDesign-USDM
+    preconditions:
+      - sh: test -f .venv/bin/activate
+        msg: "Run 'task backend:install' first"
+      - sh: test -d "{{.SOA_IG_RESOURCES_DIR}}"
+        msg: "Set SOA_IG_RESOURCES_DIR to the WIP IG's fsh-generated/resources directory"
+
   fixtures:load-app:
     desc: Load backend/fixtures/ (demo ResearchStudy + Patient) into Aidbox.
     dir: "{{.BACKEND_DIR}}"
@@ -79,6 +94,7 @@ tasks:
     desc: Load IG output and app fixtures in sequence.
     cmds:
       - task: fixtures:load-ig
+      - task: fixtures:load-soa-ig
       - task: fixtures:load-app
 
 # ─── Backend ─────────────────────────────────────────────────────────────────
@@ -107,7 +123,7 @@ tasks:
     cmds:
       - |
         source .venv/bin/activate
-        ENV_FILE={{.ENV_FILE}} RUN_INTEGRATION_TESTS=1 pytest tests/test_golden_path_integration.py -v
+        ENV_FILE={{.ENV_FILE}} RUN_INTEGRATION_TESTS=1 pytest tests/test_golden_path_integration.py tests/test_cpg_flow_integration.py -v
     preconditions:
       - sh: test -f .venv/bin/activate
         msg: "Run 'task backend:install' first"

@@ -4,6 +4,7 @@ import type {
   NextStep,
   ResearchStudySummary,
   Schedule,
+  VisitDetail,
   WithdrawResult,
 } from "./types";
 
@@ -49,8 +50,43 @@ export function completeVisit(
   });
 }
 
+export function promoteVisit(
+  subjectId: string,
+  actionId: string,
+  step: "plan" | "order",
+): Promise<Schedule> {
+  return postJson<Schedule>(`/api/research-subjects/${subjectId}/visits/${actionId}/${step}`, undefined);
+}
+
+export function scheduleVisit(subjectId: string, actionId: string): Promise<Schedule> {
+  return postJson<Schedule>(`/api/research-subjects/${subjectId}/visits/${actionId}/schedule`, undefined);
+}
+
+export function respondToAppointment(
+  subjectId: string,
+  actionId: string,
+  participant: "patient" | "site",
+  response: "accepted" | "declined",
+): Promise<Schedule> {
+  return postJson<Schedule>(`/api/research-subjects/${subjectId}/visits/${actionId}/respond`, {
+    participant,
+    response,
+  });
+}
+
+export function performVisit(subjectId: string, actionId: string): Promise<Schedule> {
+  return postJson<Schedule>(`/api/research-subjects/${subjectId}/visits/${actionId}/perform`, undefined);
+}
+
+export function completeTask(subjectId: string, actionId: string, taskId: string): Promise<Schedule> {
+  return postJson<Schedule>(
+    `/api/research-subjects/${subjectId}/visits/${actionId}/tasks/${taskId}/complete`,
+    undefined,
+  );
+}
+
 export function withdrawSubject(subjectId: string): Promise<WithdrawResult> {
   return postJson<WithdrawResult>(`/api/research-subjects/${subjectId}/withdraw`, undefined);
 }
 
-export type { NextStep };
+export type { NextStep, VisitDetail };

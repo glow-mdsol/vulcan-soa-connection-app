@@ -22,7 +22,7 @@ test.describe("authenticated golden path", () => {
   );
   test.use({ storageState: STORAGE_STATE_PATH });
 
-  test("worklist to enroll to schedule to complete to ambiguous decision prompt", async ({ page }) => {
+  test("worklist to enroll through the CPG gates to ambiguous decision prompt", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("link", { name: "Use Case 1 Demo Study (Exit Example)" }).click();
 
@@ -30,13 +30,29 @@ test.describe("authenticated golden path", () => {
     await page.getByRole("button", { name: "Enroll" }).click();
 
     await expect(page.getByText("0700e721-1f12-4998-89b8-6f4e649b62f7")).toBeVisible();
-    await page.getByRole("button", { name: "Mark complete" }).click();
+
+    const gates = [
+      "Accept proposal",
+      "Authorize",
+      "Schedule",
+      "Patient accepts",
+      "Site confirms",
+      "Perform visit",
+    ];
+    for (const gate of gates) {
+      await page.getByRole("button", { name: gate }).click();
+    }
+    await page.getByRole("button", { name: "Complete visit" }).click();
 
     await expect(page.getByText("a1806239-54f3-4762-af3f-edb9d80d29dc")).toBeVisible();
+
+    for (const gate of gates) {
+      await page.getByRole("button", { name: gate }).click();
+    }
     await page.getByRole("button", { name: "Withdraw subject" }).click();
     await expect(page.getByText("Subject withdrawn from study.")).toBeVisible();
 
-    await page.getByRole("button", { name: "Mark complete" }).click();
+    await page.getByRole("button", { name: "Complete visit" }).click();
     await expect(page.getByText("Decision needed")).toBeVisible();
     await expect(page.getByRole("button", { name: "Day 7" })).toBeVisible();
     await expect(page.getByRole("button", { name: "End of Study" })).toBeVisible();

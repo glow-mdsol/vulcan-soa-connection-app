@@ -32,10 +32,27 @@ class FhirClient:
         return response.json()
 
     async def search(self, resource_type: str, params: dict[str, str]) -> list[dict]:
-        response = await self._client.get(f"{self._base_url}/{resource_type}", params=params)
+        # Request a large page and follow Bundle.link[next] so callers see every
+        # match, not just the server's default first page.
+        merged = {"_count": "200", **params}
+        response = await self._client.get(f"{self._base_url}/{resource_type}", params=merged)
         response.raise_for_status()
         bundle = response.json()
-        return [entry["resource"] for entry in bundle.get("entry", [])]
+
+        resources: list[dict] = []
+        while True:
+            for entry in bundle.get("entry", []):
+                if "resource" in entry:
+                    resources.append(entry["resource"])
+            next_url = next(
+                (link.get("url") for link in bundle.get("link", []) if link.get("relation") == "next"),
+                None,
+            )
+            if not next_url:
+                return resources
+            response = await self._client.get(next_url)
+            response.raise_for_status()
+            bundle = response.json()
 
     async def create(self, resource_type: str, resource: dict) -> dict:
         response = await self._client.post(f"{self._base_url}/{resource_type}", json=resource)

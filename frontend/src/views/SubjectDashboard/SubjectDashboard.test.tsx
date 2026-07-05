@@ -3,7 +3,16 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { completeVisit, getSchedule, withdrawSubject } from "../../api/client";
+import {
+  completeTask,
+  completeVisit,
+  getSchedule,
+  performVisit,
+  promoteVisit,
+  respondToAppointment,
+  scheduleVisit,
+  withdrawSubject,
+} from "../../api/client";
 import SubjectDashboard from "./SubjectDashboard";
 
 vi.mock("../../api/client");
@@ -23,6 +32,11 @@ describe("SubjectDashboard", () => {
     vi.mocked(getSchedule).mockReset();
     vi.mocked(completeVisit).mockReset();
     vi.mocked(withdrawSubject).mockReset();
+    vi.mocked(promoteVisit).mockReset();
+    vi.mocked(scheduleVisit).mockReset();
+    vi.mocked(respondToAppointment).mockReset();
+    vi.mocked(performVisit).mockReset();
+    vi.mocked(completeTask).mockReset();
   });
 
   it("shows a decision prompt when completing a visit is ambiguous, then schedules the chosen step", async () => {
@@ -31,6 +45,7 @@ describe("SubjectDashboard", () => {
       current: ["treatment-1"],
       nextSteps: [],
       ambiguous: false,
+      visits: { "treatment-1": { phase: "performing", tasks: [] } },
     });
     vi.mocked(completeVisit).mockResolvedValueOnce({
       completed: ["screening-1", "treatment-1"],
@@ -40,17 +55,19 @@ describe("SubjectDashboard", () => {
         { actionId: "eos-1", title: "End of Study", transitionType: "FS" },
       ],
       ambiguous: true,
+      visits: {},
     });
     vi.mocked(completeVisit).mockResolvedValueOnce({
       completed: ["screening-1", "treatment-1"],
       current: ["day7-1"],
       nextSteps: [],
       ambiguous: false,
+      visits: {},
     });
 
     renderAtSubject("subj-1");
 
-    const completeButton = await screen.findByRole("button", { name: "Mark complete" });
+    const completeButton = await screen.findByRole("button", { name: "Complete visit" });
     await userEvent.click(completeButton);
 
     expect(await screen.findByText("Decision needed")).toBeInTheDocument();
@@ -62,12 +79,34 @@ describe("SubjectDashboard", () => {
     expect(screen.queryByText("Decision needed")).not.toBeInTheDocument();
   });
 
+  it("shows an inline alert on a gate failure while keeping the dashboard rendered", async () => {
+    vi.mocked(getSchedule).mockResolvedValue({
+      completed: [],
+      current: ["screening-1"],
+      nextSteps: [],
+      ambiguous: false,
+      visits: { "screening-1": { phase: "proposed" } },
+    });
+    vi.mocked(promoteVisit).mockRejectedValue(new Error("409"));
+
+    renderAtSubject("subj-1");
+
+    const acceptButton = await screen.findByRole("button", { name: "Accept proposal" });
+    await userEvent.click(acceptButton);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not accept the proposal.");
+    // The dashboard is still rendered (Current section survives the error).
+    expect(screen.getByRole("heading", { name: "Current" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Visit screening-1")).toBeInTheDocument();
+  });
+
   it("withdraws the subject and shows a confirmation message", async () => {
     vi.mocked(getSchedule).mockResolvedValue({
       completed: [],
       current: ["screening-1"],
       nextSteps: [],
       ambiguous: false,
+      visits: { "screening-1": { phase: "performing", tasks: [] } },
     });
     vi.mocked(withdrawSubject).mockResolvedValue({ id: "subj-1", subjectState: "withdrawn" });
 

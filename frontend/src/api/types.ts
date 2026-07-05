@@ -14,11 +14,39 @@ export interface NextStep {
   transitionType: string | null;
 }
 
+export type VisitPhase =
+  | "proposed"
+  | "planned"
+  | "ordered"
+  | "scheduled"
+  | "booked"
+  | "performing"
+  | "completed"
+  | "revoked";
+
+export interface Participant {
+  role: "patient" | "site" | "other";
+  status: string;
+}
+
+export interface VisitTask {
+  id: string;
+  description: string;
+  status: string;
+}
+
+export interface VisitDetail {
+  phase: VisitPhase;
+  participants?: Participant[];
+  tasks?: VisitTask[];
+}
+
 export interface Schedule {
   completed: string[];
   current: string[];
   nextSteps: NextStep[];
   ambiguous: boolean;
+  visits: Record<string, VisitDetail>;
 }
 
 export interface EnrollResult {

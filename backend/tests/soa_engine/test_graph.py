@@ -70,3 +70,49 @@ def test_terminal_node_has_no_transitions(plan_definition):
 def test_plan_definition_id_recorded(plan_definition):
     graph = parse_protocol_graph(plan_definition)
     assert graph.plan_definition_id == "dynamic-visit-schedule-exit-example-PlanDefinition"
+
+
+def test_parses_transitions_with_brandr_extension_base():
+    plan_definition = {
+        "resourceType": "PlanDefinition",
+        "id": "usdm-plan",
+        "action": [
+            {
+                "id": "E1",
+                "title": "Screening 1",
+                "definitionUri": "PlanDefinition/H2Q-MC-LZZT-E1-USDM",
+                "action": [
+                    {
+                        "extension": [
+                            {
+                                "url": "http://example.org/br-and-r/soa/StructureDefinition/soaTransition",
+                                "extension": [
+                                    {"url": "soaTargetId", "valueString": "E2"},
+                                    {"url": "soaTransitionType", "valueString": "SS"},
+                                ],
+                            }
+                        ]
+                    }
+                ],
+            },
+            {"id": "E2", "title": "Screening 2", "definitionUri": "PlanDefinition/H2Q-MC-LZZT-E2-USDM"},
+        ],
+    }
+
+    graph = parse_protocol_graph(plan_definition)
+
+    assert graph.root_ids == ("E1",)
+    assert graph.nodes["E1"].transitions[0].target_id == "E2"
+    assert graph.nodes["E1"].definition_uri == "PlanDefinition/H2Q-MC-LZZT-E1-USDM"
+
+
+def test_definition_uri_defaults_to_none():
+    plan_definition = {
+        "resourceType": "PlanDefinition",
+        "id": "plan-1",
+        "action": [{"id": "screening-1", "title": "Screening"}],
+    }
+
+    graph = parse_protocol_graph(plan_definition)
+
+    assert graph.nodes["screening-1"].definition_uri is None

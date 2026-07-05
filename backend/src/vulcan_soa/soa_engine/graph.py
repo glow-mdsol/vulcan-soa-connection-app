@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 
-SOA_TIMEPOINT_URL = "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTimepoint"
-SOA_TRANSITION_URL = "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/soaTransition"
+SOA_EXTENSION_BASES = (
+    "http://hl7.org/fhir/uv/vulcan-schedule/StructureDefinition/",
+    "http://example.org/br-and-r/soa/StructureDefinition/",
+)
 
 
 @dataclass(frozen=True)
@@ -17,6 +19,7 @@ class VisitNode:
     action_id: str
     title: str
     transitions: tuple[Transition, ...]
+    definition_uri: str | None = None
 
 
 @dataclass(frozen=True)
@@ -26,10 +29,12 @@ class ProtocolGraph:
     root_ids: tuple[str, ...]
 
 
-def _find_extension(extensions: list[dict], url: str) -> dict | None:
+def _find_extension(extensions: list[dict], name: str) -> dict | None:
     for ext in extensions:
-        if ext.get("url") == url:
-            return ext
+        url = ext.get("url", "")
+        for base in SOA_EXTENSION_BASES:
+            if url == base + name:
+                return ext
     return None
 
 
@@ -43,7 +48,7 @@ def _sub_extension_value(extension: dict, sub_url: str) -> object | None:
 
 
 def _parse_transition(transition_action: dict) -> Transition:
-    soa_transition = _find_extension(transition_action.get("extension", []), SOA_TRANSITION_URL)
+    soa_transition = _find_extension(transition_action.get("extension", []), "soaTransition")
     target_id = _sub_extension_value(soa_transition, "soaTargetId") if soa_transition else None
     transition_type = (
         _sub_extension_value(soa_transition, "soaTransitionType") if soa_transition else None
@@ -67,7 +72,12 @@ def _parse_transition(transition_action: dict) -> Transition:
 
 def _parse_node(action: dict) -> VisitNode:
     transitions = tuple(_parse_transition(child) for child in action.get("action", []))
-    return VisitNode(action_id=action["id"], title=action.get("title", action["id"]), transitions=transitions)
+    return VisitNode(
+        action_id=action["id"],
+        title=action.get("title", action["id"]),
+        transitions=transitions,
+        definition_uri=action.get("definitionUri"),
+    )
 
 
 def parse_protocol_graph(plan_definition: dict) -> ProtocolGraph:

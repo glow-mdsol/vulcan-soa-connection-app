@@ -1,0 +1,11 @@
+{
+  "resourceType": "ResearchStudy",
+  "id": "lzzt-usdm-demo-study",
+  "title": "LZZT USDM Demo Study (CPG Activity Flow)",
+  "status": "active",
+  "protocol": [
+    {
+      "reference": "PlanDefinition/H2Q-MC-LZZT-ProtocolDesign-USDM"
+    }
+  ]
+}

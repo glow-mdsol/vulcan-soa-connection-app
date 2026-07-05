@@ -18,6 +18,16 @@ React/Vite SPA  →  FastAPI BFF  →  Aidbox (FHIR R6)
   Subject progress is derived on every read from existing `Encounter` resources tagged back
   to their originating `PlanDefinition.action.id` — no separate state store.
 
+### CPG activity flow
+
+Each visit advances through the HL7 CPG [activity-flow](https://hl7.org/fhir/uv/cpg/activityflow.html)
+lifecycle — `ServiceRequest` proposal → plan → order, then `Appointment` schedule/book, then
+`Encounter` perform, then complete — with every resource in a chain linked by `basedOn` and
+tagged with a shared action identifier so the chain can be reassembled on read. Load the WIP
+PhUSE Schedule of Activities IG (which defines the USDM demo study,
+`lzzt-usdm-demo-study`) with `task fixtures:load-soa-ig`, pointing `SOA_IG_RESOURCES_DIR` at
+its `fsh-generated/resources` directory.
+
 ## Tech stack
 
 | Layer | Stack |
@@ -98,6 +108,12 @@ task aidbox:logs     # tail Aidbox logs
 task aidbox:reset    # destroy volumes and restart clean
 ```
 
+If Aidbox crash-loops on boot trying to download `hl7.fhir.r6.core-6.0.0-ballot3.tgz` from
+`fs.get-ig.org` (truncated download), check that `docker/docker-compose.yml` points the
+`aidbox` service at the local `pkg-server` sidecar with `BOX_FHIR_NPM_PACKAGE_REGISTRY`
+(not `BOX_FHIR_PACKAGES_NPM_REGISTRY` — that name is silently ignored) and run
+`task aidbox:reset`.
+
 ## Loading IG fixtures
 
 The Vulcan SoA IG must be cloned separately. The fixture loader is generic —
@@ -120,7 +136,7 @@ task backend:test-integration # golden-path test against live Aidbox
 task backend:serve            # uvicorn on :8000 with --reload
 ```
 
-Unit tests: **84 passed, 1 skipped** (integration test gated behind `RUN_INTEGRATION_TESTS=1`).
+Unit tests: **109 passed, 2 skipped** (integration tests gated behind `RUN_INTEGRATION_TESTS=1`).
 
 ### Module map
 
@@ -137,12 +153,16 @@ backend/src/vulcan_soa/
   scheduling.py      Encounter tagging, visit materialization, subject-context loading
   enrollment.py      enroll() — conditional-create ResearchSubject + materialize root visit
   tracking.py        withdraw_subject(), complete_visit()
+  activity_flow.py   CPG activity-flow lifecycle: proposal→plan→order→schedule/book→perform→complete
   api/
     deps.py          FastAPI dependencies (session cookie → FhirClient)
     launch.py        /launch, /launch/standalone, /callback
     context.py       GET /api/context
     research_studies.py   GET /api/research-studies, POST /{id}/enroll
-    research_subjects.py  GET /{id}/schedule, POST /{id}/visits/{actionId}/complete, POST /{id}/withdraw
+    research_subjects.py  GET /{id}/schedule, POST /{id}/visits/{actionId}/complete, POST /{id}/withdraw,
+                           POST /{id}/visits/{actionId}/plan, POST /{id}/visits/{actionId}/order,
+                           POST /{id}/visits/{actionId}/schedule, POST /{id}/visits/{actionId}/respond,
+                           POST /{id}/visits/{actionId}/perform, POST /{id}/visits/{actionId}/tasks/{taskId}/complete
     app.py           create_app() factory
 ```
 
@@ -150,7 +170,7 @@ backend/src/vulcan_soa/
 
 ```bash
 task frontend:install    # npm install
-task frontend:test       # vitest run (21 tests)
+task frontend:test       # vitest run (24 tests)
 task frontend:dev        # vite dev server on :5173
 task frontend:build      # tsc + vite build
 task frontend:e2e        # playwright test (requires running dev servers + Aidbox)
@@ -203,3 +223,5 @@ No code changes required — only the env file differs.
 | `ResearchSubject` | `status` | Required; `active`/`draft`/`retired`/`unknown` (PublicationStatus). **Withdrawal = `retired`.** |
 | `ResearchSubject` | `subjectState` | `0..*` BackboneElement array: `{code: CodeableConcept, startDate: dateTime}` |
 | `Encounter` | `status` | `planned` / `in-progress` / `completed` / `discharged` / `unknown`. **`finished` was removed in R6.** |
+| `ServiceRequest` | group identifier | There is no `groupIdentifier` field — the composite/group identifier is `requisition` (`0..1 Identifier`, aliased `groupIdentifier` in the spec text). |
+| `Appointment` | `start` / `end` | Invariant `app-3` requires both once `status` leaves `proposed`/`cancelled`/`waitlist` — stamp a placeholder window on at creation so a later `booked` transition doesn't 422. |

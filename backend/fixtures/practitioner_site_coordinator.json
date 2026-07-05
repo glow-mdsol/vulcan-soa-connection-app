@@ -1,0 +1,12 @@
+{
+  "resourceType": "Practitioner",
+  "id": "site-coordinator-demo",
+  "active": true,
+  "name": [
+    {
+      "family": "Coordinator",
+      "given": ["Site"],
+      "prefix": ["Ms"]
+    }
+  ]
+}

@@ -29,7 +29,7 @@ describe("Enroll", () => {
     vi.mocked(getContext).mockResolvedValue({ patientId: "patient-1", researchStudyId: null });
     vi.mocked(enrollPatient).mockResolvedValue({
       researchSubjectId: "subj-1",
-      schedule: { completed: [], current: [], nextSteps: [], ambiguous: false },
+      schedule: { completed: [], current: [], nextSteps: [], ambiguous: false, visits: {} },
     });
 
     renderAtStudy("study-1");
@@ -47,7 +47,7 @@ describe("Enroll", () => {
     vi.mocked(getContext).mockResolvedValue({ patientId: null, researchStudyId: null });
     vi.mocked(enrollPatient).mockResolvedValue({
       researchSubjectId: "subj-2",
-      schedule: { completed: [], current: [], nextSteps: [], ambiguous: false },
+      schedule: { completed: [], current: [], nextSteps: [], ambiguous: false, visits: {} },
     });
 
     renderAtStudy("study-1");

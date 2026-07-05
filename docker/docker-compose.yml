@@ -100,7 +100,7 @@ services:
       # --- FHIR R6 ballot (6.0.0-ballot3) ---
       # Point Aidbox at the local pkg-server so it doesn't need to download
       # the 18 MB R6 core package from the internet on every cold start.
-      BOX_FHIR_PACKAGES_NPM_REGISTRY: "http://pkg-server"
+      BOX_FHIR_NPM_PACKAGE_REGISTRY: "http://pkg-server"
       BOX_BOOTSTRAP_FHIR_PACKAGES: "hl7.fhir.r6.core#6.0.0-ballot3"
       BOX_FHIR_COMPLIANT_MODE: "true"
       BOX_FHIR_CORRECT_AIDBOX_FORMAT: "true"
