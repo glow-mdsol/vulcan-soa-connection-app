@@ -5,6 +5,7 @@ const PHASES = ["proposed", "planned", "ordered", "scheduled", "booked", "perfor
 interface VisitCardProps {
   actionId: string;
   detail: VisitDetail | undefined;
+  busy?: boolean;
   onPlan: () => void;
   onOrder: () => void;
   onSchedule: () => void;
@@ -17,6 +18,7 @@ interface VisitCardProps {
 export default function VisitCard({
   actionId,
   detail,
+  busy = false,
   onPlan,
   onOrder,
   onSchedule,
@@ -40,22 +42,30 @@ export default function VisitCard({
         ))}
       </ol>
 
-      {phase === "proposed" && <button onClick={onPlan}>Accept proposal</button>}
-      {phase === "planned" && <button onClick={onOrder}>Authorize</button>}
-      {phase === "ordered" && <button onClick={onSchedule}>Schedule</button>}
+      {phase === "revoked" && <p>Revoked — subject withdrawn</p>}
+
+      {phase === "proposed" && <button onClick={onPlan} disabled={busy}>Accept proposal</button>}
+      {phase === "planned" && <button onClick={onOrder} disabled={busy}>Authorize</button>}
+      {phase === "ordered" && <button onClick={onSchedule} disabled={busy}>Schedule</button>}
 
       {phase === "scheduled" && (
         <div aria-label="Appointment responses">
-          <button onClick={() => onRespond("patient")} disabled={participantStatus("patient") === "accepted"}>
+          <button
+            onClick={() => onRespond("patient")}
+            disabled={busy || participantStatus("patient") === "accepted"}
+          >
             Patient accepts
           </button>
-          <button onClick={() => onRespond("site")} disabled={participantStatus("site") === "accepted"}>
+          <button
+            onClick={() => onRespond("site")}
+            disabled={busy || participantStatus("site") === "accepted"}
+          >
             Site confirms
           </button>
         </div>
       )}
 
-      {phase === "booked" && <button onClick={onPerform}>Perform visit</button>}
+      {phase === "booked" && <button onClick={onPerform} disabled={busy}>Perform visit</button>}
 
       {phase === "performing" && (
         <div>
@@ -64,12 +74,14 @@ export default function VisitCard({
               <li key={task.id}>
                 {task.description} — {task.status}
                 {task.status !== "completed" && task.status !== "cancelled" && (
-                  <button onClick={() => onCompleteTask(task.id)}>Done: {task.description}</button>
+                  <button onClick={() => onCompleteTask(task.id)} disabled={busy}>
+                    Done: {task.description}
+                  </button>
                 )}
               </li>
             ))}
           </ul>
-          <button onClick={onCompleteVisit}>Complete visit</button>
+          <button onClick={onCompleteVisit} disabled={busy}>Complete visit</button>
         </div>
       )}
     </li>

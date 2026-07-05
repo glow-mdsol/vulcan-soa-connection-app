@@ -21,7 +21,8 @@ export type VisitPhase =
   | "scheduled"
   | "booked"
   | "performing"
-  | "completed";
+  | "completed"
+  | "revoked";
 
 export interface Participant {
   role: "patient" | "site" | "other";

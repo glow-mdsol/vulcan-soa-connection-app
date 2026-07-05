@@ -25,13 +25,17 @@ export default function SubjectDashboard() {
   const [pendingChoice, setPendingChoice] = useState<PendingChoice | null>(null);
   const [withdrawn, setWithdrawn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(() => {
     if (!subjectId) {
       return;
     }
     getSchedule(subjectId)
-      .then(setSchedule)
+      .then((result) => {
+        setSchedule(result);
+        setError(null);
+      })
       .catch(() => setError("Could not load this subject's schedule."));
   }, [subjectId]);
 
@@ -43,8 +47,10 @@ export default function SubjectDashboard() {
     if (!subjectId) {
       return;
     }
+    setBusy(true);
     try {
       const result = await completeVisit(subjectId, actionId, null);
+      setError(null);
       if (result.ambiguous) {
         setPendingChoice({ actionId, options: result.nextSteps });
       } else {
@@ -53,6 +59,8 @@ export default function SubjectDashboard() {
       }
     } catch {
       setError("Could not mark this visit complete.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -60,20 +68,28 @@ export default function SubjectDashboard() {
     if (!subjectId || !pendingChoice) {
       return;
     }
+    setBusy(true);
     try {
       const result = await completeVisit(subjectId, pendingChoice.actionId, targetActionId);
+      setError(null);
       setPendingChoice(null);
       setSchedule(result);
     } catch {
       setError("Could not schedule the chosen next visit.");
+    } finally {
+      setBusy(false);
     }
   }
 
   async function runGate(action: () => Promise<Schedule>, failure: string) {
+    setBusy(true);
     try {
       setSchedule(await action());
+      setError(null);
     } catch {
       setError(failure);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -81,25 +97,26 @@ export default function SubjectDashboard() {
     if (!subjectId) {
       return;
     }
+    setBusy(true);
     try {
       await withdrawSubject(subjectId);
+      setError(null);
       setWithdrawn(true);
       refresh();
     } catch {
       setError("Could not withdraw this subject.");
+    } finally {
+      setBusy(false);
     }
   }
 
-  if (error) {
-    return <p role="alert">{error}</p>;
-  }
-
   if (!schedule) {
-    return <p>Loading schedule…</p>;
+    return error ? <p role="alert">{error}</p> : <p>Loading schedule…</p>;
   }
 
   return (
     <div>
+      {error && <p role="alert">{error}</p>}
       {withdrawn && <p role="status">Subject withdrawn from study.</p>}
 
       <section aria-label="Completed visits">
@@ -119,6 +136,7 @@ export default function SubjectDashboard() {
               key={actionId}
               actionId={actionId}
               detail={schedule.visits[actionId]}
+              busy={busy}
               onPlan={() => runGate(() => promoteVisit(subjectId!, actionId, "plan"), "Could not accept the proposal.")}
               onOrder={() => runGate(() => promoteVisit(subjectId!, actionId, "order"), "Could not authorize the visit.")}
               onSchedule={() => runGate(() => scheduleVisit(subjectId!, actionId), "Could not schedule the visit.")}
@@ -163,7 +181,7 @@ export default function SubjectDashboard() {
         </section>
       )}
 
-      <button onClick={handleWithdraw} disabled={withdrawn}>
+      <button onClick={handleWithdraw} disabled={withdrawn || busy}>
         Withdraw subject
       </button>
     </div>
