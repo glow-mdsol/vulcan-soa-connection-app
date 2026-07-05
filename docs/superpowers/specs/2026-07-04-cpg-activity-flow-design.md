@@ -76,8 +76,10 @@ SR intent=proposal ─basedOn→ SR intent=plan ─basedOn→ SR intent=order
 - Each promotion **creates a new** ServiceRequest (`status: active`) and marks its
   predecessor `status: completed`.
 - Requests authored together in one promotion (visit + its activities) share a
-  `groupIdentifier` (`<protocolPdId>#<actionId>:<intent>`) — the workflow module's
-  lightweight grouping, standing in for RequestOrchestration.
+  group identifier (`<protocolPdId>#<actionId>:<intent>`) — the workflow module's
+  lightweight grouping, standing in for RequestOrchestration. *(Implementation
+  note, confirmed against live Aidbox R6: on `ServiceRequest` this field is named
+  `requisition`, not `groupIdentifier`.)*
 - Phase is derived from resourceType + `intent`/`status`; chain membership from the
   shared action-tag identifier (existing `ACTION_TAG_SYSTEM`).
 
@@ -225,7 +227,7 @@ from the extension-URL configurability.
 ## Out of scope
 
 - CPG profile conformance / R4 compatibility.
-- `RequestOrchestration` grouping (`groupIdentifier` + the visit request anchor the group).
+- `RequestOrchestration` grouping (`ServiceRequest.requisition` + the visit request anchor the group).
 - Two-step prepare/initiate promotion endpoints.
 - Activity-level individual gates in the UI (Tasks are tickable, but request promotion
   stays at visit level).
