@@ -4,3 +4,6 @@ backend/.venv/
 docker/.env
 __pycache__/
 *.pyc
+
+.claude
+.task
