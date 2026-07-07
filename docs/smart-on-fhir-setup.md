@@ -162,15 +162,18 @@ with an env file — no code changes.
 3. **Run against the remote instance:**
 
    ```bash
-   export ENV_FILE=backend/.env.connectathon
+   export ENV_FILE=.env.connectathon
    task backend:serve
    task frontend:dev
    ```
 
+   (Task runs backend commands from `backend/`, so `ENV_FILE` is relative to that
+   directory — `.env.connectathon`, not `backend/.env.connectathon`.)
+
    The fixture loader and drift guard honour the same switch:
 
    ```bash
-   ENV_FILE=backend/.env.connectathon task fixtures:load-all
+   ENV_FILE=.env.connectathon task fixtures:load-all
    ```
 
 4. **EHR launch from someone else's EHR:** give them your launch URL

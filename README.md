@@ -136,7 +136,7 @@ task backend:test-integration # golden-path test against live Aidbox
 task backend:serve            # uvicorn on :8000 with --reload
 ```
 
-Unit tests: **109 passed, 2 skipped** (integration tests gated behind `RUN_INTEGRATION_TESTS=1`).
+Unit tests: **119 passed, 2 skipped** (integration tests gated behind `RUN_INTEGRATION_TESTS=1`).
 
 ### Module map
 
@@ -193,10 +193,41 @@ src/
     types.ts           Shared TS interfaces
 ```
 
-## SMART launch flow
+## Registering the app with Aidbox
 
-Full client-registration and configuration guide (local Docker and remote/Connectathon
-Aidbox): [docs/smart-on-fhir-setup.md](docs/smart-on-fhir-setup.md).
+Aidbox knows this app as two resources: a `Client` (the BFF's SMART confidential
+client, grants `authorization_code` + `basic`) and an `AccessPolicy` that authorizes
+its requests. The registration is always **generated from the backend's own env
+file**, so the secret and redirect URI can never drift from what the BFF actually
+sends at token exchange:
+
+```
+backend/.env.local | .env.connectathon
+  SMART_CLIENT_ID ────┐
+  SMART_CLIENT_SECRET ┼──▶ scripts/generate_client_registration.py ──▶ Client/vulcan-soa-bff
+  REDIRECT_URI ───────┘         (print Bundle, or --apply to PUT)       AccessPolicy/open-for-vulcan-soa-bff
+```
+
+- **Local Docker** — nothing to do: `docker/aidbox/init-bundle.json` creates both
+  resources on first boot (identical shapes to what the generator produces).
+- **Any other instance (e.g. Connectathon)** — generate the registration and either
+  paste the printed `Bundle` into the Aidbox REST console (`POST /`), or push it
+  directly with the instance's admin client:
+
+  ```bash
+  task aidbox:register-client                # print the registration Bundle
+  AIDBOX_ADMIN_CLIENT_SECRET=<admin secret> \
+    task aidbox:register-client -- --apply   # PUT Client + AccessPolicy via admin/root
+  ```
+
+Note that `Client` and `AccessPolicy` are Aidbox *system* resources — they live at the
+box base URL (`http://localhost:8888/Client/...`), not under `/fhir`. Full
+walkthrough, including troubleshooting: [docs/smart-on-fhir-setup.md](docs/smart-on-fhir-setup.md).
+
+## Invoking the app against an Aidbox server
+
+Once the client is registered and fixtures are loaded, start both dev servers
+(`task dev`) and launch in one of two SMART modes:
 
 ```
 EHR  →  GET /launch?iss=&launch=  →  Aidbox /authorize  →  GET /callback
@@ -204,20 +235,34 @@ EHR  →  GET /launch?iss=&launch=  →  Aidbox /authorize  →  GET /callback
 SPA  →  GET /api/context           →  {patientId, researchStudyId}
 ```
 
-Standalone: `GET /launch/standalone` (no EHR context — browse study worklist instead).
+- **Standalone launch** — open [http://localhost:5173](http://localhost:5173) and
+  follow *start a standalone launch*; log in on Aidbox's hosted screen (locally:
+  `admin` / `admin`). No EHR context — you pick a study from the worklist.
+- **EHR launch** — the EHR calls `GET /launch?iss=<fhir-base>&launch=<token>`. The
+  `iss` must exactly equal the configured `FHIR_BASE_URL` or the user is bounced to
+  `/launch-error?reason=untrusted_iss`. To simulate locally, use Aidbox's SMART
+  launch UI (console → Auth → SMART on FHIR) pointed at
+  `http://localhost:8000/launch`.
 
-## Connectathon switch
+Scripts and integration tests (`load_fixtures.py`, `generate_client_registration.py
+--apply`, `task backend:test-integration`) skip OAuth entirely and use the client's
+`basic` grant with the same id/secret.
 
-To point at the HL7 public Aidbox instance instead of local Docker:
+### Switching Aidbox instances
+
+Which Aidbox you talk to is decided by `ENV_FILE` alone — no code changes:
 
 ```bash
-cp backend/.env.connectathon.example backend/.env.connectathon
-# fill in real credentials
-export ENV_FILE=backend/.env.connectathon
-task backend:serve
-```
+# local Docker (default)
+task backend:serve                             # uses backend/.env.local
 
-No code changes required — only the env file differs.
+# remote / Connectathon instance
+cp backend/.env.connectathon.example backend/.env.connectathon
+# fill in FHIR_BASE_URL, OAuth endpoints, a real SMART_CLIENT_SECRET, REDIRECT_URI
+ENV_FILE=.env.connectathon task aidbox:register-client -- --apply   # once per instance
+ENV_FILE=.env.connectathon task backend:serve
+ENV_FILE=.env.connectathon task fixtures:load-all                   # loader honours the same switch
+```
 
 ## R6 shape notes (confirmed against live Aidbox edge)
 
