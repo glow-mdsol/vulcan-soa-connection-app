@@ -32,7 +32,7 @@ test.describe("authenticated golden path", () => {
     await page.goto("/");
     await page.getByRole("link", { name: "Use Case 1 Demo Study (Exit Example)" }).click();
 
-    await page.getByLabel("Patient FHIR ID").fill("uc1-demo-patient");
+    await page.getByLabel("Patient").selectOption("uc1-demo-patient");
     await page.getByRole("button", { name: "Enroll" }).click();
 
     await expect(page.getByText("0700e721-1f12-4998-89b8-6f4e649b62f7")).toBeVisible();

@@ -19,7 +19,7 @@ export type PatientGender = "male" | "female" | "other" | "unknown";
 
 export interface PatientSummary {
   id: string;
-  gender: PatientGender;
+  gender: PatientGender | null;
   birthDate: string | null;
   deceased: boolean | null;
   active: boolean | null;
