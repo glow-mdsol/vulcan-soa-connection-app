@@ -47,6 +47,7 @@ export interface Schedule {
   nextSteps: NextStep[];
   ambiguous: boolean;
   visits: Record<string, VisitDetail>;
+  titles?: Record<string, string>;
 }
 
 export interface EnrollResult {

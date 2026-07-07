@@ -1,0 +1,451 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  line-height: 1.5;
+}
+
+/* ── App shell ─────────────────────────────────────────────── */
+.app-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header-inner {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-6);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.brand {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.01em;
+}
+
+.brand-mark {
+  color: var(--primary);
+  margin-right: var(--space-2);
+}
+
+.brand-tag {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.container {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+
+/* ── Typography ────────────────────────────────────────────── */
+.page-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 var(--space-4);
+}
+
+.section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 0 0 var(--space-3);
+}
+
+.meta {
+  color: var(--muted-light);
+  font-size: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ── Cards ─────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+/* ── Badges & chips ────────────────────────────────────────── */
+.badge {
+  background: var(--primary-tint);
+  color: var(--primary);
+  border-radius: var(--radius-pill);
+  padding: 2px 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.badge-success {
+  background: var(--success-tint);
+  color: var(--success);
+}
+
+.chip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ── Buttons ───────────────────────────────────────────────── */
+.btn,
+.btn-secondary,
+.btn-danger-quiet,
+.btn-choice {
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.btn {
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid var(--primary);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.btn-secondary,
+.btn-choice {
+  background: var(--surface);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.btn-secondary:hover:not(:disabled),
+.btn-choice:hover:not(:disabled) {
+  background: var(--primary-tint);
+}
+
+.btn-danger-quiet {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid transparent;
+}
+
+.btn-danger-quiet:hover:not(:disabled) {
+  border-color: var(--danger);
+}
+
+.btn:disabled,
+.btn-secondary:disabled,
+.btn-danger-quiet:disabled,
+.btn-choice:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-row {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* ── Phase stepper (keeps <ol> + visible phase words) ──────── */
+.stepper {
+  list-style: none;
+  display: flex;
+  gap: var(--space-1);
+  margin: var(--space-3) 0;
+  padding: 0;
+}
+
+.stepper li {
+  flex: 1;
+  text-align: center;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-light);
+  padding-top: var(--space-2);
+  border-top: 4px solid var(--border);
+  border-radius: 2px;
+}
+
+.stepper li.done {
+  border-top-color: var(--success);
+  color: var(--success);
+}
+
+.stepper li[aria-current="step"] {
+  border-top-color: var(--primary);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* ── Decision banner ───────────────────────────────────────── */
+.banner-decision {
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.banner-decision h2 {
+  color: var(--warn-text);
+  font-size: 1rem;
+  margin: 0 0 var(--space-2);
+}
+
+.banner-decision ul {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* ── Alerts & status ───────────────────────────────────────── */
+.alert {
+  background: #fdecea;
+  border: 1px solid #f2c4bf;
+  color: var(--danger);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.status-note {
+  background: var(--success-tint);
+  border: 1px solid #bfe7d7;
+  color: var(--success);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.status-card {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: var(--space-8);
+  max-width: 480px;
+  margin: 10vh auto 0;
+  text-align: center;
+}
+
+/* ── Forms ─────────────────────────────────────────────────── */
+.form-card {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: var(--space-6);
+  max-width: 480px;
+}
+
+.form-field {
+  display: block;
+  margin-bottom: var(--space-4);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.form-field input {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.form-field input:focus {
+  outline: 2px solid var(--primary-tint);
+  border-color: var(--primary);
+}
+
+/* ── Study worklist ────────────────────────────────────────── */
+.study-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.study-card a {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: var(--space-4) var(--space-6);
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.study-card a:hover {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+}
+
+/* ── Dashboard: timeline rail + work area ──────────────────── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 2fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.timeline {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: var(--space-4);
+}
+
+.timeline ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.timeline-node {
+  position: relative;
+  padding: 0 0 var(--space-4) var(--space-6);
+}
+
+.timeline-node:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-node::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.timeline-node::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 21px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--border);
+}
+
+.timeline-node:last-child::after {
+  display: none;
+}
+
+.timeline-node.done::before {
+  background: var(--success);
+}
+
+.timeline-node.done::after {
+  background: var(--success);
+}
+
+.timeline-node.active::before {
+  background: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-tint);
+}
+
+.timeline-node.upcoming::before {
+  background: var(--surface);
+  border: 2px solid var(--muted-light);
+  width: 8px;
+  height: 8px;
+}
+
+.timeline-node.done {
+  color: var(--success);
+}
+
+.timeline-node.active {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.timeline-node.upcoming {
+  color: var(--muted-light);
+}
+
+/* ── Visit tasks ───────────────────────────────────────────── */
+.task-list {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.task-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  background: var(--bg);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.9rem;
+}

@@ -1,0 +1,33 @@
+:root {
+  /* Clinical Calm palette (spec §3) */
+  --bg: #f4f7fa;
+  --surface: #ffffff;
+  --border: #dde5ec;
+  --border-soft: #e2e9f0;
+  --primary: #0f6a8b;
+  --primary-dark: #0b5470;
+  --primary-tint: #e6f4f9;
+  --success: #19a97b;
+  --success-tint: #e7f6f0;
+  --warn-bg: #fff8e8;
+  --warn-border: #f0dfae;
+  --warn-text: #8a6d1a;
+  --danger: #b3392f;
+  --text: #1d2b36;
+  --muted: #5b7286;
+  --muted-light: #8fa3b3;
+
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 3px rgba(16, 42, 67, 0.06), 0 1px 2px rgba(16, 42, 67, 0.04);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
