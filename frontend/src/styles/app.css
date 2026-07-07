@@ -147,7 +147,7 @@ body {
 
 .btn {
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   border: 1px solid var(--primary);
 }
 
@@ -249,8 +249,8 @@ body {
 
 /* ── Alerts & status ───────────────────────────────────────── */
 .alert {
-  background: #fdecea;
-  border: 1px solid #f2c4bf;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
   color: var(--danger);
   border-radius: var(--radius);
   padding: var(--space-3) var(--space-4);
@@ -259,7 +259,7 @@ body {
 
 .status-note {
   background: var(--success-tint);
-  border: 1px solid #bfe7d7;
+  border: 1px solid var(--success-border);
   color: var(--success);
   border-radius: var(--radius);
   padding: var(--space-3) var(--space-4);

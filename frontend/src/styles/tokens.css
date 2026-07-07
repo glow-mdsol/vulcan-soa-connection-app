@@ -13,6 +13,10 @@
   --warn-border: #f0dfae;
   --warn-text: #8a6d1a;
   --danger: #b3392f;
+  --on-primary: #ffffff;
+  --danger-bg: #fdecea;
+  --danger-border: #f2c4bf;
+  --success-border: #bfe7d7;
   --text: #1d2b36;
   --muted: #5b7286;
   --muted-light: #8fa3b3;
