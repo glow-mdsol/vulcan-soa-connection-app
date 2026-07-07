@@ -21,10 +21,12 @@ function Landing() {
 
   if (failed) {
     return (
-      <p>
-        No active session. Launch this app from your EHR, or{" "}
-        <a href="/launch/standalone">start a standalone launch</a>.
-      </p>
+      <div className="status-card">
+        <p>
+          No active session. Launch this app from your EHR, or{" "}
+          <a href="/launch/standalone">start a standalone launch</a>.
+        </p>
+      </div>
     );
   }
 

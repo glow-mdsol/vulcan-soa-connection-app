@@ -11,8 +11,10 @@ export default function LaunchError() {
   const message = (reason && REASON_MESSAGES[reason]) ?? "Sign-in failed.";
 
   return (
-    <div>
-      <p role="alert">{message}</p>
+    <div className="status-card">
+      <p role="alert" className="alert">
+        {message}
+      </p>
       <p>Please relaunch this app from your EHR.</p>
     </div>
   );

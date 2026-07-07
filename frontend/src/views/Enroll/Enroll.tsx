@@ -67,35 +67,41 @@ export default function Enroll() {
   }
 
   if (status === "loading") {
-    return <p>Loading…</p>;
+    return <p className="status-note">Loading…</p>;
   }
 
   return (
     <div>
       {studyId && <ResearchStudyDetails studyId={studyId} />}
-      <h2>Enroll a patient</h2>
-      {error && <p role="alert">{error}</p>}
-      <label>
-        Patient
-        <select
-          value={selectedPatientId}
-          onChange={(event) => setSelectedPatientId(event.target.value)}
-          disabled={!patients.length}
-        >
-          <option value="">Select a patient</option>
-          {patients.map((patient) => (
-            <option key={patient.id} value={patient.id}>
-              {patient.id.substring(0, 8)}
-              {patient.gender ? ` · ${patient.gender}` : ""}
-              {patient.birthDate ? ` · ${patient.birthDate}` : ""}
-            </option>
-          ))}
-        </select>
-      </label>
-      {contextPatientId && <p>Launch context patient: {contextPatientId}</p>}
-      <button onClick={handleEnroll} disabled={status === "enrolling" || !patientId}>
-        {status === "enrolling" ? "Enrolling…" : "Enroll"}
-      </button>
+      <div className="form-card">
+        <h2 className="page-title">Enroll a patient</h2>
+        {error && (
+          <p role="alert" className="alert">
+            {error}
+          </p>
+        )}
+        <label className="form-field">
+          Patient
+          <select
+            value={selectedPatientId}
+            onChange={(event) => setSelectedPatientId(event.target.value)}
+            disabled={!patients.length}
+          >
+            <option value="">Select a patient</option>
+            {patients.map((patient) => (
+              <option key={patient.id} value={patient.id}>
+                {patient.id.substring(0, 8)}
+                {patient.gender ? ` · ${patient.gender}` : ""}
+                {patient.birthDate ? ` · ${patient.birthDate}` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        {contextPatientId && <p className="meta">Launch context patient: {contextPatientId}</p>}
+        <button className="btn" onClick={handleEnroll} disabled={status === "enrolling" || !patientId}>
+          {status === "enrolling" ? "Enrolling…" : "Enroll"}
+        </button>
+      </div>
     </div>
   );
 }

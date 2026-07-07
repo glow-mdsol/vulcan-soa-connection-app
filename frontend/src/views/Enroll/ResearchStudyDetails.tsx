@@ -46,7 +46,11 @@ export default function ResearchStudyDetails({ studyId }: ResearchStudyDetailsPr
         </div>
         {study?.status && <span className="badge">{study.status}</span>}
       </div>
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p role="alert" className="alert">
+          {error}
+        </p>
+      )}
       {study && (
         <>
           <p className="meta">{study.id}</p>

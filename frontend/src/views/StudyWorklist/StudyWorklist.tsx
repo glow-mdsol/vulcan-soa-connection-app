@@ -15,24 +15,31 @@ export default function StudyWorklist() {
   }, []);
 
   if (error) {
-    return <p role="alert">{error}</p>;
+    return (
+      <p role="alert" className="alert">
+        {error}
+      </p>
+    );
   }
 
   if (studies === null) {
-    return <p>Loading studies…</p>;
+    return <p className="status-note">Loading studies…</p>;
   }
 
   if (studies.length === 0) {
-    return <p>No research studies are available yet.</p>;
+    return <p className="chip">No research studies are available yet.</p>;
   }
 
   return (
-    <ul>
-      {studies.map((study) => (
-        <li key={study.id}>
-          <Link to={`/enroll/${study.id}`}>{study.title}</Link>
-        </li>
-      ))}
-    </ul>
+    <div>
+      <h2 className="page-title">Research studies</h2>
+      <ul className="study-list">
+        {studies.map((study) => (
+          <li key={study.id} className="study-card">
+            <Link to={`/enroll/${study.id}`}>{study.title}</Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
