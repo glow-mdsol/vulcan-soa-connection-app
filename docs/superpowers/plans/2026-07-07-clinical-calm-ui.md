@@ -61,7 +61,7 @@ frontend/src/views/SubjectDashboard/SubjectDashboard.tsx # two-pane grid, wires 
 - Consumes: `ScheduleState` (`vulcan_soa.soa_engine.engine`), `ProtocolGraph`/`VisitNode` (`vulcan_soa.soa_engine.graph`).
 - Produces: `schedule_response(state: ScheduleState, graph: ProtocolGraph, visits: dict[str, dict] | None = None) -> dict` whose payload now includes `"titles": {action_id: title}` for **every** node in the graph. Task 6's frontend reads this as `schedule.titles`.
 
-- [ ] **Step 1: Update the existing tests and add the titles test**
+- [x] **Step 1: Update the existing tests and add the titles test**
 
 In `backend/tests/test_scheduling.py`, the two `schedule_response` tests build a `ScheduleState` directly. Add a tiny graph helper and pass it; add a titles assertion test. Replace the current test bodies as follows (keep the existing imports, add the graph imports):
 
@@ -103,12 +103,12 @@ from tests.test_scheduling import tiny_graph  # or duplicate the helper locally 
 
 If cross-test imports fail (pytest collection), duplicate the 10-line `tiny_graph()` helper into the file instead — do not create a new conftest fixture for this.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd backend && source .venv/bin/activate && pytest tests/test_scheduling.py tests/test_activity_flow_chains.py -v`
 Expected: FAIL — `TypeError: schedule_response() takes 1 positional argument …` (signature doesn't accept graph yet) and the new titles test fails.
 
-- [ ] **Step 3: Change `schedule_response` and all call sites**
+- [x] **Step 3: Change `schedule_response` and all call sites**
 
 `backend/src/vulcan_soa/scheduling.py` — replace the function:
 
@@ -135,12 +135,12 @@ Call sites (each already has the graph in scope):
 - `backend/src/vulcan_soa/enrollment.py:59`: `"schedule": schedule_response(post_enroll_state, graph, visits=visits),`
 - `backend/src/vulcan_soa/api/research_subjects.py:43`: `return schedule_response(state, graph, visits=visit_details(chains))`
 
-- [ ] **Step 4: Run the full backend suite**
+- [x] **Step 4: Run the full backend suite**
 
 Run: `cd backend && pytest`
 Expected: all pass (previously 133 passed, 2 skipped; +1 new test).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/vulcan_soa/scheduling.py backend/src/vulcan_soa/activity_flow.py backend/src/vulcan_soa/enrollment.py backend/src/vulcan_soa/api/research_subjects.py backend/tests/test_scheduling.py backend/tests/test_activity_flow_chains.py
@@ -161,7 +161,7 @@ git commit -m "Include per-node titles in the schedule payload"
 - Produces: CSS custom properties (`--bg`, `--surface`, `--border`, `--border-soft`, `--primary`, `--primary-tint`, `--success`, `--warn-bg`, `--warn-border`, `--warn-text`, `--danger`, `--text`, `--muted`, `--radius`, `--radius-lg`, `--shadow`) and component classes (`.app-header`, `.app-header-inner`, `.brand`, `.brand-mark`, `.container`, `.card`, `.card-title`, `.meta`, `.badge`, `.btn`, `.btn-secondary`, `.btn-danger-quiet`, `.btn-choice`, `.stepper`, `.banner-decision`, `.form-card`, `.form-field`, `.status-card`, `.study-list`, `.study-card`, `.dashboard-grid`, `.timeline`, `.timeline-node`, `.timeline-connector`, `.chip-list`, `.chip`, `.alert`, `.status-note`, `.section-title`, `.page-title`, `.task-list`, `.btn-row`) that Tasks 3–6 reference by exactly these names.
 - Consumes: nothing.
 
-- [ ] **Step 1: Create `frontend/src/styles/tokens.css`**
+- [x] **Step 1: Create `frontend/src/styles/tokens.css`**
 
 ```css
 :root {
@@ -199,7 +199,7 @@ git commit -m "Include per-node titles in the schedule payload"
 }
 ```
 
-- [ ] **Step 2: Create `frontend/src/styles/app.css`**
+- [x] **Step 2: Create `frontend/src/styles/app.css`**
 
 ```css
 * {
@@ -655,7 +655,7 @@ body {
 }
 ```
 
-- [ ] **Step 3: Import the stylesheets and extend the `Schedule` type**
+- [x] **Step 3: Import the stylesheets and extend the `Schedule` type**
 
 `frontend/src/main.tsx` — add at the top of the imports:
 
@@ -670,12 +670,12 @@ import "./styles/app.css";
   titles?: Record<string, string>;
 ```
 
-- [ ] **Step 4: Verify suites and build stay green**
+- [x] **Step 4: Verify suites and build stay green**
 
 Run: `cd frontend && npm test && npm run build`
 Expected: 25 tests pass; `tsc` build clean. (CSS is inert until classes are used.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/styles/tokens.css frontend/src/styles/app.css frontend/src/main.tsx frontend/src/api/types.ts
@@ -695,7 +695,7 @@ git commit -m "Add Clinical Calm design tokens and component stylesheet"
 - Consumes: classes `.app-header`, `.app-header-inner`, `.brand`, `.brand-mark`, `.brand-tag`, `.container` (Task 2).
 - Produces: `AppShell({ children }: { children: ReactNode })` — header + `<main class="container">`. `App` renders routes inside it. The `h1` accessible name stays exactly `Vulcan Schedule of Activities` (the `◈` mark is `aria-hidden`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `frontend/src/AppShell.test.tsx`:
 
@@ -720,12 +720,12 @@ describe("AppShell", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd frontend && npx vitest run src/AppShell.test.tsx`
 Expected: FAIL — cannot resolve `./AppShell`.
 
-- [ ] **Step 3: Implement `AppShell` and use it in `App`**
+- [x] **Step 3: Implement `AppShell` and use it in `App`**
 
 `frontend/src/AppShell.tsx`:
 
@@ -767,12 +767,12 @@ export default function App() {
 }
 ```
 
-- [ ] **Step 4: Run the suite**
+- [x] **Step 4: Run the suite**
 
 Run: `cd frontend && npm test`
 Expected: all pass, including the untouched `App.test.tsx` (accessible name preserved; `aria-hidden` keeps the `◈` out of the name).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/AppShell.tsx frontend/src/AppShell.test.tsx frontend/src/App.tsx
@@ -794,7 +794,7 @@ git commit -m "Add Clinical Calm app shell around all routes"
 - Consumes: classes from Task 2. No API/type changes. All roles, names, and copy strings unchanged.
 - Produces: nothing consumed by later tasks.
 
-- [ ] **Step 1: Restyle `StudyWorklist`**
+- [x] **Step 1: Restyle `StudyWorklist`**
 
 Replace the returned JSX only (imports/logic unchanged); error/loading/empty branches gain classes:
 
@@ -829,7 +829,7 @@ Replace the returned JSX only (imports/logic unchanged); error/loading/empty bra
   );
 ```
 
-- [ ] **Step 2: Restyle `Enroll`**
+- [x] **Step 2: Restyle `Enroll`**
 
 Replace the returned JSX (logic unchanged; label text, button name, and copy identical):
 
@@ -866,7 +866,7 @@ Replace the returned JSX (logic unchanged; label text, button name, and copy ide
   );
 ```
 
-- [ ] **Step 3: Restyle launch pages and the Landing no-session block**
+- [x] **Step 3: Restyle launch pages and the Landing no-session block**
 
 `frontend/src/launch/LaunchPending.tsx`:
 
@@ -908,12 +908,12 @@ export default function LaunchPending() {
   }
 ```
 
-- [ ] **Step 4: Run the suite**
+- [x] **Step 4: Run the suite**
 
 Run: `cd frontend && npm test`
 Expected: all pass unmodified (StudyWorklist, Enroll, LaunchError, routes tests query roles/names/copy, all preserved).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/views/StudyWorklist/StudyWorklist.tsx frontend/src/views/Enroll/Enroll.tsx frontend/src/launch/LaunchPending.tsx frontend/src/launch/LaunchError.tsx frontend/src/routes.tsx
@@ -932,7 +932,7 @@ git commit -m "Style worklist, enroll, launch, and landing views"
 - Consumes: classes from Task 2.
 - Produces: `VisitCardProps` gains optional `title?: string`. Rendered card shows the title (fallback: actionId) as `.card-title`, the phase as a `.badge`, the action id as `.meta` text (always visible), and keeps: `aria-label={\`Visit ${actionId}\`}`, `<ol aria-label="Visit phases">` with visible phase words + `aria-current="step"`, all button accessible names, `aria-label="Appointment responses"`, `aria-label="Visit tasks"`. Task 6 passes `title={schedule.titles?.[actionId]}`.
 
-- [ ] **Step 1: Add the new tests (append to the existing describe block)**
+- [x] **Step 1: Add the new tests (append to the existing describe block)**
 
 ```tsx
   it("shows the visit title when provided and keeps the action id visible", () => {
@@ -953,12 +953,12 @@ git commit -m "Style worklist, enroll, launch, and landing views"
   });
 ```
 
-- [ ] **Step 2: Run to verify the first new test fails**
+- [x] **Step 2: Run to verify the first new test fails**
 
 Run: `cd frontend && npx vitest run src/views/SubjectDashboard/VisitCard.test.tsx`
 Expected: FAIL — `title` prop not accepted / "Screening" not rendered.
 
-- [ ] **Step 3: Rewrite `VisitCard.tsx`**
+- [x] **Step 3: Rewrite `VisitCard.tsx`**
 
 ```tsx
 import type { VisitDetail } from "../../api/types";
@@ -1091,12 +1091,12 @@ export default function VisitCard({
 
 Note: the task `<li>` wraps its text in a `<span>` for flex layout — the existing test asserts button names and `Done: …` absence, not the li's exact text nodes, so this is safe. The `"revoked"` phase is not in `PHASES`, so `phaseIndex` is `-1` and no stepper item is marked done — same as before.
 
-- [ ] **Step 4: Run the suite**
+- [x] **Step 4: Run the suite**
 
 Run: `cd frontend && npm test`
 Expected: all pass — 3 pre-existing VisitCard tests unmodified + 2 new.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/views/SubjectDashboard/VisitCard.tsx frontend/src/views/SubjectDashboard/VisitCard.test.tsx
@@ -1116,7 +1116,7 @@ git commit -m "Style VisitCard with title, phase badge, and segmented stepper"
 - Consumes: `Schedule` with optional `titles` (Task 2), `VisitCard` with `title` prop (Task 5), classes from Task 2.
 - Produces: `Timeline({ completed, current, nextSteps, titles }: { completed: string[]; current: string[]; nextSteps: NextStep[]; titles?: Record<string, string> })` — a `<nav aria-label="Study timeline">` rendering done → active → upcoming nodes. Not consumed elsewhere.
 
-- [ ] **Step 1: Write the failing Timeline test**
+- [x] **Step 1: Write the failing Timeline test**
 
 `frontend/src/views/SubjectDashboard/Timeline.test.tsx`:
 
@@ -1152,12 +1152,12 @@ describe("Timeline", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd frontend && npx vitest run src/views/SubjectDashboard/Timeline.test.tsx`
 Expected: FAIL — cannot resolve `./Timeline`.
 
-- [ ] **Step 3: Implement `Timeline.tsx`**
+- [x] **Step 3: Implement `Timeline.tsx`**
 
 ```tsx
 import type { NextStep } from "../../api/types";
@@ -1197,12 +1197,12 @@ export default function Timeline({ completed, current, nextSteps, titles }: Time
 }
 ```
 
-- [ ] **Step 4: Run the Timeline test to verify it passes**
+- [x] **Step 4: Run the Timeline test to verify it passes**
 
 Run: `cd frontend && npx vitest run src/views/SubjectDashboard/Timeline.test.tsx`
 Expected: 2 passed.
 
-- [ ] **Step 5: Rewire `SubjectDashboard`'s JSX**
+- [x] **Step 5: Rewire `SubjectDashboard`'s JSX**
 
 Only the returned JSX changes (all state/handlers stay). Replace everything from `if (!schedule) {` to the end of the component with:
 
@@ -1315,12 +1315,12 @@ Two deliberate choices to call out:
 - The old `<section aria-label="Completed visits">` list is replaced by the rail. No existing test queries "Completed visits" or the `Completed` heading, but the Playwright spec asserts completed action-id **text** is visible — the rail renders it (as the fallback or alongside; with real data the title shows and the id appears on the *current* visit card's meta line. The spec's `getByText("0700e721-…")` fires while that visit is **current**, before completion — verified against the spec flow in `frontend/e2e/golden-path.spec.ts:31-40`).
 - The heading `Current` keeps its accessible name (`section-title` is styling only) — `SubjectDashboard.test.tsx:99` requires it.
 
-- [ ] **Step 6: Run the full frontend suite**
+- [x] **Step 6: Run the full frontend suite**
 
 Run: `cd frontend && npm test`
 Expected: all pass — the three untouched SubjectDashboard tests (their mocks lack `titles`; every access is optional-chained) plus Timeline and VisitCard additions. Total: 31.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add frontend/src/views/SubjectDashboard/Timeline.tsx frontend/src/views/SubjectDashboard/Timeline.test.tsx frontend/src/views/SubjectDashboard/SubjectDashboard.tsx
@@ -1334,12 +1334,12 @@ git commit -m "Lay out Subject Dashboard as timeline rail plus work area"
 **Files:**
 - No source changes. Verification only (fix-forward if anything fails, smallest change that keeps the constraint set).
 
-- [ ] **Step 1: Full test suites**
+- [x] **Step 1: Full test suites**
 
 Run: `cd backend && source .venv/bin/activate && pytest && cd ../frontend && npm test && npm run build`
 Expected: backend all green; frontend 31 tests; `tsc`/vite build clean.
 
-- [ ] **Step 2: Live visual + golden-path check**
+- [x] **Step 2: Live visual + golden-path check**
 
 With Aidbox up (`task aidbox:up && task aidbox:wait`, fixtures loaded) and dev servers running (`task dev` — ports come from the root `.env`, currently 5199/8010):
 
@@ -1358,7 +1358,7 @@ npx playwright screenshot http://localhost:5199/ /tmp/ui-landing.png
 
 Open the app in a browser and click through worklist → enroll → dashboard; confirm the rail, cards, badges, and decision banner render styled (not browser defaults). If any page still shows unstyled content, check the two CSS imports in `main.tsx` load (view-source should list both files).
 
-- [ ] **Step 3: Commit anything the verification forced, then finish**
+- [x] **Step 3: Commit anything the verification forced, then finish**
 
 ```bash
 git status   # should be clean if Steps 1-2 needed no fixes
