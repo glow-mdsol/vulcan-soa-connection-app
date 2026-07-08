@@ -4,7 +4,7 @@ import httpx
 import pytest
 import respx
 
-from vulcan_soa.enrollment import EnrollmentConflict, enroll
+from vulcan_soa.enrollment import EnrollmentConflict, enroll, subject_identifier_of
 from vulcan_soa.fhir_client import FhirClient
 
 STUDY = {
@@ -127,7 +127,7 @@ async def test_enroll_conflicts_when_identifier_taken_by_another_patient():
 
 
 @respx.mock
-async def test_reenroll_same_patient_same_identifier_is_idempotent():
+async def test_reenroll_same_patient_same_identifier_is_idempotent(monkeypatch):
     _mock_protocol()
     existing = {
         "resourceType": "ResearchSubject",
@@ -143,12 +143,30 @@ async def test_reenroll_same_patient_same_identifier_is_idempotent():
     )
     update_route = respx.put("http://aidbox.test/fhir/ResearchSubject/subj-existing")
 
+    # Spy on the reconciliation's identifier lookup so this test fails (not just
+    # vacuously passes) if the post-conditional-create reconciliation is removed.
+    reconciled_subjects: list[dict] = []
+
+    def spy_subject_identifier_of(subject: dict) -> str | None:
+        reconciled_subjects.append(subject)
+        return subject_identifier_of(subject)
+
+    monkeypatch.setattr(
+        "vulcan_soa.enrollment.subject_identifier_of", spy_subject_identifier_of
+    )
+
     client = FhirClient(base_url="http://aidbox.test/fhir", access_token="tok")
     result = await enroll(client, "uc1-demo-research-study", "patient-1", "SUBJ-001")
     await client.close()
 
     assert result["researchSubjectId"] == "subj-existing"
     assert not update_route.called
+    # Positive proof the no-op path ran: reconciliation examined the existing
+    # subject and saw the matching identifier (hence no update, no conflict).
+    assert any(
+        subject.get("id") == "subj-existing" and subject_identifier_of(subject) == "SUBJ-001"
+        for subject in reconciled_subjects
+    ), "reconciliation never examined the existing subject's identifier"
 
 
 @respx.mock
