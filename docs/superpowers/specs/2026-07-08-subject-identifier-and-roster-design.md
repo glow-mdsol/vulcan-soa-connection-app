@@ -22,7 +22,8 @@ namespace as the app's existing plan-action tags. No other resource changes.
 
 - `enroll(client, study_id, patient_id, subject_identifier: str)` — new required
   parameter; the created `ResearchSubject` carries the identifier entry.
-- New module-level helper `subject_identifier(subject: dict) -> str | None`
+- New module-level helper `subject_identifier_of(subject: dict) -> str | None`
+  (named `_of` to avoid clashing with `enroll`'s `subject_identifier` parameter)
   returning the value of the `urn:vulcan-soa:subject-id` identifier entry (None
   when absent) — the single extraction point, reused by the routes below.
 - New `class EnrollmentConflict(Exception)` with a human-readable message.
