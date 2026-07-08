@@ -49,14 +49,16 @@ demo exists to prove is byte-identical to the manual path.
 
 ## Testing
 
-- Backend: promote tests live in `backend/tests/test_activity_flow_requests.py`
-  and schedule/appointment tests in `test_activity_flow_appointments.py`; add
-  expedite tests in a new `backend/tests/test_activity_flow_expedite.py`
-  following those files' respx fixture style: expedite from
-  `proposed` asserts the full cascade (plan + order ServiceRequests created,
-  predecessors completed, Appointment created with placeholder window); from
-  `planned` (two steps); from `ordered` (schedule only); from `scheduled` →
-  PhaseError. Route test: 409 surfaced via `_guarded`.
+- Backend: new `backend/tests/test_activity_flow_expedite.py` asserts
+  expedite's own contract — phase dispatch and gate sequencing — with
+  monkeypatched `promote`/`schedule_visit`/`_load_workspace` (from `proposed`:
+  plan, order, schedule in order, last payload returned; from `planned`: two
+  steps; from `ordered`: one; from `scheduled`/missing: PhaseError/ValueError).
+  The resource cascade itself is already covered per-gate by
+  `test_activity_flow_requests.py`/`test_activity_flow_appointments.py` —
+  not duplicated. Route tests mirror the existing monkeypatch style in
+  `backend/tests/api/test_research_subjects.py` (happy path + 409). A live
+  expedite run against local Aidbox verifies the real cascade end-to-end.
 - Frontend: `VisitCard` tests — `proposed` and `planned` phases render both
   buttons, clicking `Schedule now` fires `onExpedite`, `ordered` does NOT show
   it; existing tests pass unmodified apart from the required new `onExpedite`
