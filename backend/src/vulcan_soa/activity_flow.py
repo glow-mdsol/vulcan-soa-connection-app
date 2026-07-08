@@ -342,6 +342,40 @@ async def schedule_visit(client: FhirClient, subject_id: str, action_id: str) ->
     return await schedule_payload(client, workspace)
 
 
+_EXPEDITE_STEPS = {
+    "proposed": ("plan", "order", "schedule"),
+    "planned": ("order", "schedule"),
+    "ordered": ("schedule",),
+}
+
+
+async def expedite(client: FhirClient, subject_id: str, action_id: str) -> dict:
+    """Walk a visit through its remaining gates to `scheduled` in one call.
+
+    Composes the single-step gates, so every intermediate ServiceRequest is
+    still created and completed; a mid-batch failure leaves the visit in a
+    valid intermediate phase recoverable via the individual gate buttons.
+    """
+    workspace = await _load_workspace(client, subject_id)
+    chain = workspace.chains.get(action_id)
+    if chain is None:
+        raise ValueError(f"No materialized visit found for action {action_id}")
+    steps = _EXPEDITE_STEPS.get(chain.phase)
+    if steps is None:
+        raise PhaseError(
+            f"visit {action_id} is in phase '{chain.phase}', "
+            f"expected one of {sorted(_EXPEDITE_STEPS)}"
+        )
+
+    payload: dict = {}
+    for step in steps:
+        if step == "schedule":
+            payload = await schedule_visit(client, subject_id, action_id)
+        else:
+            payload = await promote(client, subject_id, action_id, step)
+    return payload
+
+
 async def respond(
     client: FhirClient, subject_id: str, action_id: str, participant: str, response: str
 ) -> dict:

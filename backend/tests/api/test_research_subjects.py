@@ -301,3 +301,32 @@ def test_complete_task_route_happy_path(monkeypatch):
     assert response.status_code == 200
     assert response.json() == _EMPTY_SCHEDULE
     assert captured["args"] == ("subj-1", "E1", "task-1")
+
+
+def test_expedite_route_happy_path(monkeypatch):
+    captured = {}
+
+    async def fake_expedite(client, subject_id, action_id):
+        captured["args"] = (subject_id, action_id)
+        return _EMPTY_SCHEDULE
+
+    monkeypatch.setattr("vulcan_soa.api.research_subjects.expedite", fake_expedite)
+
+    test_client = _app_client_with_dummy_fhir_client()
+    response = test_client.post("/api/research-subjects/subj-1/visits/E1/expedite")
+
+    assert response.status_code == 200
+    assert response.json() == _EMPTY_SCHEDULE
+    assert captured["args"] == ("subj-1", "E1")
+
+
+def test_expedite_route_returns_conflict_on_phase_error(monkeypatch):
+    async def raise_phase_error(client, subject_id, action_id):
+        raise PhaseError("wrong phase")
+
+    monkeypatch.setattr("vulcan_soa.api.research_subjects.expedite", raise_phase_error)
+
+    test_client = _app_client_with_dummy_fhir_client()
+    response = test_client.post("/api/research-subjects/subj-1/visits/E1/expedite")
+
+    assert response.status_code == 409

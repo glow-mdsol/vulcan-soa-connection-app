@@ -7,6 +7,7 @@ from vulcan_soa.activity_flow import (
     complete,
     complete_task,
     context_from_chains,
+    expedite,
     load_chains,
     perform,
     promote,
@@ -62,6 +63,13 @@ async def schedule_route(
     subject_id: str, action_id: str, client: FhirClient = Depends(get_fhir_client)
 ) -> dict:
     return await _guarded(schedule_visit(client, subject_id, action_id))
+
+
+@router.post("/{subject_id}/visits/{action_id}/expedite")
+async def expedite_route(
+    subject_id: str, action_id: str, client: FhirClient = Depends(get_fhir_client)
+) -> dict:
+    return await _guarded(expedite(client, subject_id, action_id))
 
 
 @router.post("/{subject_id}/visits/{action_id}/respond")
