@@ -30,7 +30,7 @@
 - Consumes: `promote(client, subject_id, action_id, to_intent) -> dict`, `schedule_visit(client, subject_id, action_id) -> dict`, `_load_workspace(client, subject_id) -> _SubjectWorkspace`, `PhaseError`, `_guarded` — all existing.
 - Produces: `expedite(client: FhirClient, subject_id: str, action_id: str) -> dict` (returns the last gate's schedule payload) and `POST /api/research-subjects/{subject_id}/visits/{action_id}/expedite`. Task 2's `expediteVisit` posts to this route.
 
-- [ ] **Step 1: Write the failing unit tests**
+- [x] **Step 1: Write the failing unit tests**
 
 `backend/tests/test_activity_flow_expedite.py`:
 ```python
@@ -100,12 +100,12 @@ async def test_expedite_unmaterialized_action_raises_value_error(monkeypatch):
         await expedite(None, "subj-1", "E1")
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `cd backend && source .venv/bin/activate && pytest tests/test_activity_flow_expedite.py -v`
 Expected: FAIL — `ImportError: cannot import name 'expedite'`.
 
-- [ ] **Step 3: Implement `expedite`**
+- [x] **Step 3: Implement `expedite`**
 
 In `backend/src/vulcan_soa/activity_flow.py`, directly after `schedule_visit`:
 ```python
@@ -145,12 +145,12 @@ async def expedite(client: FhirClient, subject_id: str, action_id: str) -> dict:
 
 Note: `promote`/`schedule_visit` are looked up as module attributes at call time inside `expedite` — the tests' `monkeypatch.setattr(activity_flow, ...)` relies on this; do not import them into local names.
 
-- [ ] **Step 4: Unit tests pass**
+- [x] **Step 4: Unit tests pass**
 
 Run: `cd backend && pytest tests/test_activity_flow_expedite.py -v`
 Expected: `5 passed`
 
-- [ ] **Step 5: Add the route + route tests (failing first)**
+- [x] **Step 5: Add the route + route tests (failing first)**
 
 Append to `backend/tests/api/test_research_subjects.py` (mirror the file's existing `_EMPTY_SCHEDULE`/`_app_client_with_dummy_fhir_client` helpers — read the file's existing `test_schedule_route_happy_path` first and copy its structure):
 ```python
@@ -193,12 +193,12 @@ async def expedite_route(
     return await _guarded(expedite(client, subject_id, action_id))
 ```
 
-- [ ] **Step 6: Full backend suite**
+- [x] **Step 6: Full backend suite**
 
 Run: `cd backend && pytest`
 Expected: all pass (baseline 139 passed, 2 skipped; +7 new).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/src/vulcan_soa/activity_flow.py backend/src/vulcan_soa/api/research_subjects.py backend/tests/test_activity_flow_expedite.py backend/tests/api/test_research_subjects.py
@@ -219,7 +219,7 @@ git commit -m "Add expedite gate batching proposal->scheduled"
 - Consumes: Task 1's route; existing `Schedule` type; classes `.btn`, `.btn-secondary`, `.btn-row`.
 - Produces: `expediteVisit(subjectId: string, actionId: string): Promise<Schedule>`; `VisitCardProps` gains required `onExpedite: () => void`.
 
-- [ ] **Step 1: Write the failing VisitCard tests**
+- [x] **Step 1: Write the failing VisitCard tests**
 
 In `VisitCard.test.tsx`: add `onExpedite: vi.fn(),` to `noopHandlers()`, then append:
 ```tsx
@@ -250,7 +250,7 @@ In `VisitCard.test.tsx`: add `onExpedite: vi.fn(),` to `noopHandlers()`, then ap
 
 Run: `cd frontend && npx vitest run src/views/SubjectDashboard/VisitCard.test.tsx` — expect the first two to FAIL (no such button; TS error on unknown prop is also an acceptable red).
 
-- [ ] **Step 2: Implement**
+- [x] **Step 2: Implement**
 
 `frontend/src/api/client.ts`, after `scheduleVisit` (mirror its exact fetch/post helper style — read it first):
 ```ts
@@ -292,12 +292,12 @@ The `ordered` branch stays exactly as it is.
                   }
 ```
 
-- [ ] **Step 3: Full frontend suite + build**
+- [x] **Step 3: Full frontend suite + build**
 
 Run: `cd frontend && npm test && npm run build`
 Expected: 38 passed (35 + 3), build clean.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add frontend/src/api/client.ts frontend/src/views/SubjectDashboard/VisitCard.tsx frontend/src/views/SubjectDashboard/VisitCard.test.tsx frontend/src/views/SubjectDashboard/SubjectDashboard.tsx
@@ -310,12 +310,12 @@ git commit -m "Add Schedule now fast-path to proposed and planned visit cards"
 
 **Files:** none (verification only; fix-forward smallest-change if something fails).
 
-- [ ] **Step 1: Both suites**
+- [x] **Step 1: Both suites**
 
 Run: `cd backend && source .venv/bin/activate && pytest -q && cd ../frontend && npm test`
 Expected: backend 146 passed / 2 skipped; frontend 38 passed.
 
-- [ ] **Step 2: Live cascade check against local Aidbox**
+- [x] **Step 2: Live cascade check against local Aidbox**
 
 With local Aidbox up and fixtures loaded, run from `backend/` (venv active, `ENV_FILE=.env.local`):
 ```bash
@@ -358,7 +358,7 @@ EOF
 ```
 Expected output ends with `LIVE EXPEDITE OK`. (Check `enroll`'s actual signature/return keys in `backend/src/vulcan_soa/enrollment.py` before running; adjust the driver if they differ — the assertion targets, not the driver, are the requirement.)
 
-- [ ] **Step 3: No commit needed unless a fix was required**
+- [x] **Step 3: No commit needed unless a fix was required**
 
 ```bash
 git status --short   # expect clean

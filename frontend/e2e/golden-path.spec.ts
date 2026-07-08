@@ -46,14 +46,14 @@ test.describe("authenticated golden path", () => {
       "Perform visit",
     ];
     for (const gate of gates) {
-      await page.getByRole("button", { name: gate }).click();
+      await page.getByRole("button", { name: gate, exact: true }).click();
     }
     await page.getByRole("button", { name: "Complete visit" }).click();
 
     await expect(page.getByText("a1806239-54f3-4762-af3f-edb9d80d29dc")).toBeVisible();
 
     for (const gate of gates) {
-      await page.getByRole("button", { name: gate }).click();
+      await page.getByRole("button", { name: gate, exact: true }).click();
     }
     await page.getByRole("button", { name: "Withdraw subject" }).click();
     await expect(page.getByText("Subject withdrawn from study.")).toBeVisible();
