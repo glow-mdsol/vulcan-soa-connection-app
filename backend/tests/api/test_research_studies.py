@@ -105,7 +105,7 @@ def test_enroll_patient_calls_enrollment_and_returns_schedule():
 
 
 def test_enroll_route_maps_conflict_to_409(monkeypatch):
-    async def raise_conflict(client, study_id, patient_id, subject_identifier):
+    async def raise_conflict(client, study_id, patient_id, subject_identifier, plan_definition_id=None):
         raise EnrollmentConflict("subject identifier 'SUBJ-001' is already in use in this study")
 
     monkeypatch.setattr("vulcan_soa.api.research_studies.enroll", raise_conflict)

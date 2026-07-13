@@ -1,3 +1,5 @@
+import json
+
 import httpx
 import respx
 from fastapi import FastAPI
@@ -16,6 +18,44 @@ SUBJECT = {
     "study": {"reference": "ResearchStudy/study-1"},
     "subject": {"reference": "Patient/patient-1"},
     "identifier": [{"system": "urn:vulcan-soa:subject-id", "value": "SUBJ-001"}],
+    "subjectState": [
+        {
+            "code": {
+                "coding": [
+                    {
+                        "system": "http://terminology.hl7.org/CodeSystem/research-subject-state",
+                        "code": "candidate",
+                    }
+                ]
+            },
+            "startDate": "2026-07-01",
+        },
+        {
+            "code": {
+                "coding": [
+                    {
+                        "system": "http://terminology.hl7.org/CodeSystem/research-subject-state",
+                        "code": "eligible",
+                    }
+                ]
+            },
+            "startDate": "2026-07-02",
+        },
+    ],
+    "subjectMilestone": [
+        {
+            "milestone": {
+                "coding": [
+                    {
+                        "system": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl",
+                        "code": "C16735",
+                        "display": "Informed Consent",
+                    }
+                ]
+            },
+            "date": "2026-07-01",
+        }
+    ],
 }
 STUDY = {
     "resourceType": "ResearchStudy",
@@ -98,6 +138,210 @@ def test_get_schedule_returns_resolved_state():
     ]
     assert body["visits"] == {}
     assert body["subjectIdentifier"] == "SUBJ-001"
+    assert body["subjectStatus"] == "active"
+    assert body["subjectState"] == "eligible"
+    assert body["milestones"] == [
+        {"milestone": "C16735", "display": "Informed Consent", "date": "2026-07-01"}
+    ]
+
+
+@respx.mock
+def test_record_milestone_appends_to_subject_milestones():
+    respx.get("https://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json=dict(SUBJECT, meta={"versionId": "3"}))
+    )
+    updated = dict(
+        SUBJECT,
+        subjectMilestone=SUBJECT["subjectMilestone"]
+        + [
+            {
+                "milestone": {
+                    "coding": [
+                        {
+                            "system": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl",
+                            "code": "C114209",
+                            "display": "Subject is Randomized",
+                        }
+                    ]
+                },
+                "date": "2026-07-08",
+            }
+        ],
+    )
+    put_route = respx.put("https://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json=updated)
+    )
+
+    app = _build_test_app()
+    app.dependency_overrides[get_fhir_client] = lambda: FhirClient(
+        base_url="https://aidbox.test/fhir", access_token="tok-1"
+    )
+    test_client = TestClient(app)
+
+    response = test_client.post(
+        "/api/research-subjects/subj-1/milestones",
+        json={"milestone": "C114209", "display": "Subject is Randomized", "date": "2026-07-08"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "researchSubjectId": "subj-1",
+        "milestones": [
+            {"milestone": "C16735", "display": "Informed Consent", "date": "2026-07-01"},
+            {"milestone": "C114209", "display": "Subject is Randomized", "date": "2026-07-08"},
+        ],
+    }
+    sent = put_route.calls.last.request
+    assert sent.headers["If-Match"] == 'W/"3"'
+    sent_milestones = json.loads(sent.content)["subjectMilestone"]
+    assert sent_milestones[-1]["milestone"]["coding"] == [
+        {
+            "system": "http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl",
+            "code": "C114209",
+            "display": "Subject is Randomized",
+        }
+    ]
+
+
+def test_record_milestone_rejects_empty_milestone():
+    app = _build_test_app()
+    app.dependency_overrides[get_fhir_client] = lambda: FhirClient(
+        base_url="https://aidbox.test/fhir", access_token="tok-1"
+    )
+    test_client = TestClient(app)
+
+    response = test_client.post(
+        "/api/research-subjects/subj-1/milestones", json={"milestone": ""}
+    )
+
+    assert response.status_code == 422
+
+
+@respx.mock
+def test_assign_identifier_sets_identifier_on_unassigned_subject():
+    unassigned = {k: v for k, v in SUBJECT.items() if k != "identifier"}
+    respx.get("https://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json=dict(unassigned, meta={"versionId": "1"}))
+    )
+    respx.get("https://aidbox.test/fhir/ResearchSubject").mock(
+        return_value=httpx.Response(200, json={"resourceType": "Bundle"})
+    )
+    put_route = respx.put("https://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json=SUBJECT)
+    )
+
+    app = _build_test_app()
+    app.dependency_overrides[get_fhir_client] = lambda: FhirClient(
+        base_url="https://aidbox.test/fhir", access_token="tok-1"
+    )
+    test_client = TestClient(app)
+
+    response = test_client.post(
+        "/api/research-subjects/subj-1/identifier", json={"subjectIdentifier": "SUBJ-001"}
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "researchSubjectId": "subj-1",
+        "subjectIdentifier": "SUBJ-001",
+        "patientId": "patient-1",
+        "status": "active",
+    }
+    sent = put_route.calls.last.request
+    assert sent.headers["If-Match"] == 'W/"1"'
+
+
+@respx.mock
+def test_assign_identifier_is_idempotent_for_same_value():
+    respx.get("https://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json=SUBJECT)
+    )
+    put_route = respx.put("https://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json=SUBJECT)
+    )
+
+    app = _build_test_app()
+    app.dependency_overrides[get_fhir_client] = lambda: FhirClient(
+        base_url="https://aidbox.test/fhir", access_token="tok-1"
+    )
+    test_client = TestClient(app)
+
+    response = test_client.post(
+        "/api/research-subjects/subj-1/identifier", json={"subjectIdentifier": "SUBJ-001"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["subjectIdentifier"] == "SUBJ-001"
+    assert not put_route.called
+
+
+@respx.mock
+def test_assign_identifier_rejects_subject_with_different_identifier():
+    respx.get("https://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json=SUBJECT)
+    )
+
+    app = _build_test_app()
+    app.dependency_overrides[get_fhir_client] = lambda: FhirClient(
+        base_url="https://aidbox.test/fhir", access_token="tok-1"
+    )
+    test_client = TestClient(app)
+
+    response = test_client.post(
+        "/api/research-subjects/subj-1/identifier", json={"subjectIdentifier": "SUBJ-002"}
+    )
+
+    assert response.status_code == 409
+    assert "already has identifier 'SUBJ-001'" in response.json()["detail"]
+
+
+@respx.mock
+def test_assign_identifier_rejects_value_taken_by_another_subject():
+    unassigned = {k: v for k, v in SUBJECT.items() if k != "identifier"}
+    respx.get("https://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json=unassigned)
+    )
+    respx.get("https://aidbox.test/fhir/ResearchSubject").mock(
+        return_value=httpx.Response(
+            200,
+            json=_bundle(
+                {
+                    "resourceType": "ResearchSubject",
+                    "id": "subj-other",
+                    "identifier": [
+                        {"system": "urn:vulcan-soa:subject-id", "value": "SUBJ-002"}
+                    ],
+                }
+            ),
+        )
+    )
+
+    app = _build_test_app()
+    app.dependency_overrides[get_fhir_client] = lambda: FhirClient(
+        base_url="https://aidbox.test/fhir", access_token="tok-1"
+    )
+    test_client = TestClient(app)
+
+    response = test_client.post(
+        "/api/research-subjects/subj-1/identifier", json={"subjectIdentifier": "SUBJ-002"}
+    )
+
+    assert response.status_code == 409
+    assert "already in use" in response.json()["detail"]
+
+
+def test_assign_identifier_rejects_empty_value():
+    app = _build_test_app()
+    app.dependency_overrides[get_fhir_client] = lambda: FhirClient(
+        base_url="https://aidbox.test/fhir", access_token="tok-1"
+    )
+    test_client = TestClient(app)
+
+    response = test_client.post(
+        "/api/research-subjects/subj-1/identifier", json={"subjectIdentifier": ""}
+    )
+
+    assert response.status_code == 422
 
 
 @respx.mock
@@ -332,3 +576,168 @@ def test_expedite_route_returns_conflict_on_phase_error(monkeypatch):
     response = test_client.post("/api/research-subjects/subj-1/visits/E1/expedite")
 
     assert response.status_code == 409
+
+
+@respx.mock
+def test_visit_activities_lists_observations_and_activity_types():
+    respx.get("https://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json=SUBJECT)
+    )
+    respx.get("https://aidbox.test/fhir/ResearchStudy/study-1").mock(
+        return_value=httpx.Response(200, json=STUDY)
+    )
+    respx.get("https://aidbox.test/fhir/PlanDefinition/plan-1").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "PlanDefinition",
+                "id": "plan-1",
+                "action": [
+                    {
+                        "id": "screening-1",
+                        "title": "Screening",
+                        "definitionCanonical": "http://example.org/PlanDefinition/visit-screening",
+                    }
+                ],
+            },
+        )
+    )
+    respx.get("https://aidbox.test/fhir/PlanDefinition/visit-screening").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "PlanDefinition",
+                "id": "visit-screening",
+                "action": [
+                    {
+                        "title": "Vital Signs and Temperature",
+                        "definitionUri": "ActivityDefinition/act-vitals",
+                    },
+                    {
+                        "title": "ADAS-Cog",
+                        "definitionCanonical": "http://example.org/soa/Questionnaire/q-adas-cog",
+                    },
+                    {"title": "No definition here"},
+                ],
+            },
+        )
+    )
+    respx.get("https://aidbox.test/fhir/ActivityDefinition/act-vitals").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "ActivityDefinition",
+                "id": "act-vitals",
+                "status": "active",
+                "observationResultRequirement": [
+                    "ObservationDefinition/od-bp-panel",
+                    "ObservationDefinition/od-temperature",
+                ],
+            },
+        )
+    )
+    respx.get("https://aidbox.test/fhir/ObservationDefinition/od-bp-panel").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "ObservationDefinition",
+                "id": "od-bp-panel",
+                "code": {"text": "Blood pressure panel"},
+                "hasMember": [
+                    {"reference": "ObservationDefinition/od-systolic"},
+                    {"reference": "ObservationDefinition/od-diastolic"},
+                ],
+            },
+        )
+    )
+    respx.get("https://aidbox.test/fhir/ObservationDefinition/od-systolic").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "ObservationDefinition",
+                "id": "od-systolic",
+                "code": {"coding": [{"code": "8480-6", "display": "Systolic blood pressure"}]},
+            },
+        )
+    )
+    respx.get("https://aidbox.test/fhir/ObservationDefinition/od-diastolic").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "ObservationDefinition",
+                "id": "od-diastolic",
+                "code": {"coding": [{"code": "8462-4"}]},
+            },
+        )
+    )
+    respx.get("https://aidbox.test/fhir/ObservationDefinition/od-temperature").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "ObservationDefinition",
+                "id": "od-temperature",
+                "code": {"coding": [{"code": "8310-5", "display": "Body temperature"}]},
+            },
+        )
+    )
+
+    app = _build_test_app()
+    app.dependency_overrides[get_fhir_client] = lambda: FhirClient(
+        base_url="https://aidbox.test/fhir", access_token="tok-1"
+    )
+    test_client = TestClient(app)
+
+    response = test_client.get("/api/research-subjects/subj-1/visits/screening-1/activities")
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "id": "act-vitals",
+            "title": "Vital Signs and Temperature",
+            "type": "ActivityDefinition",
+            "observations": [
+                {
+                    "id": "od-bp-panel",
+                    "display": "Blood pressure panel",
+                    "members": [
+                        {
+                            "id": "od-systolic",
+                            "display": "Systolic blood pressure",
+                            "members": [],
+                        },
+                        {"id": "od-diastolic", "display": "8462-4", "members": []},
+                    ],
+                },
+                {"id": "od-temperature", "display": "Body temperature", "members": []},
+            ],
+        },
+        {
+            "id": "q-adas-cog",
+            "title": "ADAS-Cog",
+            "type": "Questionnaire",
+            "observations": [],
+        },
+    ]
+
+
+@respx.mock
+def test_visit_activities_unknown_action_returns_404():
+    respx.get("https://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json=SUBJECT)
+    )
+    respx.get("https://aidbox.test/fhir/ResearchStudy/study-1").mock(
+        return_value=httpx.Response(200, json=STUDY)
+    )
+    respx.get("https://aidbox.test/fhir/PlanDefinition/plan-1").mock(
+        return_value=httpx.Response(200, json=PLAN_DEFINITION)
+    )
+
+    app = _build_test_app()
+    app.dependency_overrides[get_fhir_client] = lambda: FhirClient(
+        base_url="https://aidbox.test/fhir", access_token="tok-1"
+    )
+    test_client = TestClient(app)
+
+    response = test_client.get("/api/research-subjects/subj-1/visits/nope-9/activities")
+
+    assert response.status_code == 404

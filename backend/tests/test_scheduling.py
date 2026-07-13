@@ -1,8 +1,13 @@
 import httpx
+import pytest
 import respx
 
 from vulcan_soa.fhir_client import FhirClient
-from vulcan_soa.scheduling import load_protocol_graph, schedule_response
+from vulcan_soa.scheduling import (
+    load_protocol_graph,
+    load_protocol_graph_for_subject,
+    schedule_response,
+)
 from vulcan_soa.soa_engine.engine import NextStep, ScheduleState
 from vulcan_soa.soa_engine.graph import ProtocolGraph, VisitNode
 
@@ -85,3 +90,98 @@ def test_schedule_response_includes_titles_for_every_graph_node():
     )
     response = schedule_response(state, tiny_graph())
     assert response["titles"] == {"a-1": "Screening", "b-2": "Treatment Day 1"}
+
+
+@respx.mock
+async def test_load_protocol_graph_uses_chosen_plan_definition():
+    respx.get("http://aidbox.test/fhir/ResearchStudy/study-1").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "ResearchStudy",
+                "id": "study-1",
+                "protocol": [
+                    {"reference": "PlanDefinition/plan-1"},
+                    {"reference": "PlanDefinition/plan-2"},
+                ],
+            },
+        )
+    )
+    respx.get("http://aidbox.test/fhir/PlanDefinition/plan-2").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "PlanDefinition",
+                "id": "plan-2",
+                "action": [{"id": "baseline-1", "title": "Baseline"}],
+            },
+        )
+    )
+
+    client = FhirClient(base_url="http://aidbox.test/fhir", access_token="tok")
+    graph, plan_definition_id = await load_protocol_graph(client, "study-1", "plan-2")
+    await client.close()
+
+    assert plan_definition_id == "plan-2"
+    assert "baseline-1" in graph.nodes
+
+
+@respx.mock
+async def test_load_protocol_graph_rejects_plan_not_in_study():
+    respx.get("http://aidbox.test/fhir/ResearchStudy/study-1").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "ResearchStudy",
+                "id": "study-1",
+                "protocol": [{"reference": "PlanDefinition/plan-1"}],
+            },
+        )
+    )
+
+    client = FhirClient(base_url="http://aidbox.test/fhir", access_token="tok")
+    with pytest.raises(ValueError, match="not a protocol of study"):
+        await load_protocol_graph(client, "study-1", "plan-99")
+    await client.close()
+
+
+@respx.mock
+async def test_load_protocol_graph_for_subject_honours_assigned_plan():
+    respx.get("http://aidbox.test/fhir/ResearchStudy/study-1").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "ResearchStudy",
+                "id": "study-1",
+                "protocol": [
+                    {"reference": "PlanDefinition/plan-1"},
+                    {"reference": "PlanDefinition/plan-2"},
+                ],
+            },
+        )
+    )
+    respx.get("http://aidbox.test/fhir/PlanDefinition/plan-2").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "PlanDefinition",
+                "id": "plan-2",
+                "action": [{"id": "baseline-1", "title": "Baseline"}],
+            },
+        )
+    )
+    subject = {
+        "resourceType": "ResearchSubject",
+        "id": "subj-1",
+        "study": {"reference": "ResearchStudy/study-1"},
+        "identifier": [
+            {"system": "urn:vulcan-soa:subject-id", "value": "SUBJ-001"},
+            {"system": "urn:vulcan-soa:plan-definition", "value": "plan-2"},
+        ],
+    }
+
+    client = FhirClient(base_url="http://aidbox.test/fhir", access_token="tok")
+    _, plan_definition_id = await load_protocol_graph_for_subject(client, subject)
+    await client.close()
+
+    assert plan_definition_id == "plan-2"

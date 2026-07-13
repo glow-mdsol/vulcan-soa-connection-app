@@ -4,7 +4,12 @@ import httpx
 import pytest
 import respx
 
-from vulcan_soa.enrollment import EnrollmentConflict, enroll, subject_identifier_of
+from vulcan_soa.enrollment import (
+    EnrollmentConflict,
+    enroll,
+    subject_identifier_of,
+    update_subject_state,
+)
 from vulcan_soa.fhir_client import FhirClient
 
 STUDY = {
@@ -68,7 +73,8 @@ async def test_enroll_creates_subject_and_materializes_root_visit():
     ]
     subject_payload = json.loads(create_subject_route.calls.last.request.content)
     assert subject_payload["identifier"] == [
-        {"system": "urn:vulcan-soa:subject-id", "value": "SUBJ-001"}
+        {"system": "urn:vulcan-soa:subject-id", "value": "SUBJ-001"},
+        {"system": "urn:vulcan-soa:plan-definition", "value": "plan-1"},
     ]
 
 
@@ -221,3 +227,80 @@ async def test_legacy_subject_without_identifier_gains_one_via_update():
         {"system": "urn:vulcan-soa:subject-id", "value": "SUBJ-009"}
     ]
     assert update_route.calls.last.request.headers["If-Match"] == 'W/"3"'
+
+
+@respx.mock
+async def test_update_subject_state_appends_tho_state_entry():
+    respx.get("http://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "ResearchSubject",
+                "id": "subj-1",
+                "status": "active",
+                "meta": {"versionId": "2"},
+                "study": {"reference": "ResearchStudy/uc1-demo-research-study"},
+                "subject": {"reference": "Patient/patient-1"},
+                "subjectState": [
+                    {
+                        "code": {
+                            "coding": [
+                                {
+                                    "system": "http://terminology.hl7.org/CodeSystem/research-subject-state",
+                                    "code": "eligible",
+                                }
+                            ]
+                        },
+                        "startDate": "2026-07-01",
+                    }
+                ],
+            },
+        )
+    )
+    update_route = respx.put("http://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json={"resourceType": "ResearchSubject", "id": "subj-1"})
+    )
+
+    client = FhirClient(base_url="http://aidbox.test/fhir", access_token="tok")
+    await update_subject_state(client, "uc1-demo-research-study", "subj-1", "on-study")
+    await client.close()
+
+    payload = json.loads(update_route.calls.last.request.content)
+    assert update_route.calls.last.request.headers["If-Match"] == 'W/"2"'
+    new_entry = payload["subjectState"][-1]
+    assert new_entry["code"]["coding"] == [
+        {
+            "system": "http://terminology.hl7.org/CodeSystem/research-subject-state",
+            "code": "on-study",
+        }
+    ]
+    assert new_entry["startDate"]
+
+
+async def test_update_subject_state_rejects_code_outside_value_set():
+    client = FhirClient(base_url="http://aidbox.test/fhir", access_token="tok")
+    with pytest.raises(ValueError, match="Invalid research subject state"):
+        # R6-build draft code, not in THO research-subject-state
+        await update_subject_state(client, "uc1-demo-research-study", "subj-1", "in-screening")
+    await client.close()
+
+
+@respx.mock
+async def test_update_subject_state_rejects_subject_from_another_study():
+    respx.get("http://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "ResearchSubject",
+                "id": "subj-1",
+                "status": "active",
+                "study": {"reference": "ResearchStudy/other-study"},
+                "subject": {"reference": "Patient/patient-1"},
+            },
+        )
+    )
+
+    client = FhirClient(base_url="http://aidbox.test/fhir", access_token="tok")
+    with pytest.raises(ValueError, match="does not belong to study"):
+        await update_subject_state(client, "uc1-demo-research-study", "subj-1", "on-study")
+    await client.close()
