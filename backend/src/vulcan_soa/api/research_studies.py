@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 
+from vulcan_soa.activity_flow import build_protocol_tree
 from vulcan_soa.api.deps import get_fhir_client
 from vulcan_soa.api.models import EnrollRequest
-from vulcan_soa.enrollment import EnrollmentConflict, enroll, subject_identifier_of
+from vulcan_soa.enrollment import EnrollmentConflict, enroll, subject_summary
 from vulcan_soa.fhir_client import FhirClient
 
 router = APIRouter(prefix="/api/research-studies")
@@ -38,15 +39,19 @@ async def list_study_subjects(
     subjects = await client.search(
         "ResearchSubject", {"study": f"ResearchStudy/{study_id}"}
     )
-    return [
-        {
-            "researchSubjectId": subject["id"],
-            "subjectIdentifier": subject_identifier_of(subject),
-            "patientId": subject.get("subject", {}).get("reference", "").split("/", 1)[-1],
-            "status": subject.get("status"),
-        }
-        for subject in subjects
-    ]
+    return [subject_summary(subject) for subject in subjects]
+
+
+@router.get("/{study_id}/protocol-tree")
+async def get_protocol_tree(
+    study_id: str,
+    planDefinitionId: str | None = None,
+    client: FhirClient = Depends(get_fhir_client),
+) -> dict:
+    try:
+        return await build_protocol_tree(client, study_id, planDefinitionId)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/{study_id}/enroll")
@@ -54,6 +59,10 @@ async def enroll_patient(
     study_id: str, body: EnrollRequest, client: FhirClient = Depends(get_fhir_client)
 ) -> dict:
     try:
-        return await enroll(client, study_id, body.patientId, body.subjectIdentifier)
+        return await enroll(
+            client, study_id, body.patientId, body.subjectIdentifier, body.planDefinitionId
+        )
     except EnrollmentConflict as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

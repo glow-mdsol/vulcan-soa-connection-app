@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from vulcan_soa.api.deps import SESSION_COOKIE_NAME, get_current_session, get_fhir_client
 from vulcan_soa.auth import Session
+from vulcan_soa.cache import TTLCache
 from vulcan_soa.config import Settings
 from vulcan_soa.store import InMemoryStore
 
@@ -21,6 +22,7 @@ def _build_test_app() -> FastAPI:
     )
     app.state.session_store = InMemoryStore()
     app.state.pending_launch_store = InMemoryStore()
+    app.state.definitional_cache = TTLCache()
 
     @app.get("/whoami")
     def whoami(session: Session = Depends(get_current_session)):

@@ -9,7 +9,11 @@ import datetime
 from dataclasses import dataclass, field
 
 from vulcan_soa.fhir_client import FhirClient
-from vulcan_soa.scheduling import load_protocol_graph_for_subject, schedule_response
+from vulcan_soa.scheduling import (
+    load_protocol_graph,
+    load_protocol_graph_for_subject,
+    schedule_response,
+)
 from vulcan_soa.soa_engine.conditions import SubjectContext
 from vulcan_soa.soa_engine.engine import resolve_schedule_state
 from vulcan_soa.soa_engine.graph import ProtocolGraph, VisitNode
@@ -215,6 +219,317 @@ async def materialize_proposal(
         }
         await client.create("ServiceRequest", activity_request)
     return created_visit
+
+
+def _resource_id_from_uri(uri: str, resource_type: str) -> str | None:
+    # Handles both relative ("PlanDefinition/x") and canonical
+    # ("http://example.org/.../PlanDefinition/x") references.
+    marker = f"{resource_type}/"
+    if marker not in uri:
+        return None
+    return uri.rsplit(marker, 1)[1]
+
+
+def _observation_definition_id(reference) -> str | None:
+    uri = reference if isinstance(reference, str) else reference.get("reference", "")
+    return _resource_id_from_uri(uri, "ObservationDefinition")
+
+
+async def _read_observation_tree(
+    client: FhirClient, od_id: str, seen: set[str]
+) -> dict | None:
+    # `seen` guards against hasMember reference cycles.
+    if od_id in seen:
+        return None
+    seen.add(od_id)
+
+    od = await client.read("ObservationDefinition", od_id)
+    code = od.get("code", {})
+    coding = (code.get("coding") or [{}])[0]
+
+    members = []
+    for reference in od.get("hasMember", []):
+        member_id = _observation_definition_id(reference)
+        if member_id is None:
+            continue
+        member = await _read_observation_tree(client, member_id, seen)
+        if member is not None:
+            members.append(member)
+
+    return {
+        "id": od["id"],
+        "display": code.get("text")
+        or coding.get("display")
+        or od.get("title")
+        or coding.get("code")
+        or od["id"],
+        "members": members,
+    }
+
+
+async def _expected_observations(client: FhirClient, definition: dict) -> list[dict]:
+    references = definition.get("observationResultRequirement") or definition.get(
+        "observationRequirement"
+    ) or []
+    observations = []
+    seen: set[str] = set()
+    for reference in references:
+        od_id = _observation_definition_id(reference)
+        if od_id is None:
+            continue
+        observation = await _read_observation_tree(client, od_id, seen)
+        if observation is not None:
+            observations.append(observation)
+    return observations
+
+
+async def _activity_node(client: FhirClient, action: dict) -> dict | None:
+    uri = action.get("definitionUri") or action.get("definitionCanonical") or ""
+    questionnaire_id = _resource_id_from_uri(uri, "Questionnaire")
+    activity_definition_id = _resource_id_from_uri(uri, "ActivityDefinition")
+    if questionnaire_id is not None:
+        return {
+            "id": questionnaire_id,
+            "title": action.get("title") or questionnaire_id,
+            "type": "Questionnaire",
+            "observations": [],
+        }
+    if activity_definition_id is not None:
+        definition = await client.read("ActivityDefinition", activity_definition_id)
+        return {
+            "id": definition["id"],
+            "title": action.get("title") or definition.get("title") or definition["id"],
+            "type": "ActivityDefinition",
+            "observations": await _expected_observations(client, definition),
+        }
+    return None
+
+
+async def list_visit_activities(
+    client: FhirClient, subject_id: str, action_id: str
+) -> list[dict]:
+    subject = await client.read("ResearchSubject", subject_id)
+    graph, _ = await load_protocol_graph_for_subject(client, subject)
+    node = graph.nodes.get(action_id)
+    if node is None:
+        raise ValueError(f"Unknown visit action {action_id}")
+
+    visit_pd_id = _resource_id_from_uri(node.definition_uri or "", "PlanDefinition")
+    if visit_pd_id is None:
+        return []
+    visit_pd = await client.read("PlanDefinition", visit_pd_id)
+
+    activities = []
+    for action in visit_pd.get("action", []):
+        activity = await _activity_node(client, action)
+        if activity is not None:
+            activities.append(activity)
+    return activities
+
+
+def _observation_tree_node(observation: dict) -> dict:
+    return {
+        "id": observation["id"],
+        "type": "ObservationDefinition",
+        "label": observation["display"],
+        "children": [_observation_tree_node(member) for member in observation["members"]],
+    }
+
+
+async def _visit_tree_node(client: FhirClient, action: dict) -> dict:
+    action_id = action.get("id", "")
+    uri = action.get("definitionUri") or action.get("definitionCanonical") or ""
+    visit_pd_id = _resource_id_from_uri(uri, "PlanDefinition")
+
+    children = []
+    if visit_pd_id is not None:
+        visit_pd = await client.read("PlanDefinition", visit_pd_id)
+        for sub_action in visit_pd.get("action", []):
+            activity = await _activity_node(client, sub_action)
+            if activity is None:
+                continue
+            children.append(
+                {
+                    "id": activity["id"],
+                    "type": activity["type"],
+                    "label": activity["title"],
+                    "children": [
+                        _observation_tree_node(obs) for obs in activity["observations"]
+                    ],
+                }
+            )
+
+    return {
+        "id": action_id,
+        "type": "PlanDefinition",
+        "label": action.get("title") or action_id,
+        "children": children,
+    }
+
+
+async def build_protocol_tree(
+    client: FhirClient, study_id: str, plan_definition_id: str | None = None
+) -> dict:
+    study = await client.read("ResearchStudy", study_id)
+    _, plan_definition_id = await load_protocol_graph(client, study_id, plan_definition_id)
+    root_plan_definition = await client.read("PlanDefinition", plan_definition_id)
+
+    visit_children = [
+        await _visit_tree_node(client, action)
+        for action in root_plan_definition.get("action", [])
+    ]
+
+    return {
+        "id": study_id,
+        "type": "ResearchStudy",
+        "label": study.get("title", study_id),
+        "children": [
+            {
+                "id": plan_definition_id,
+                "type": "PlanDefinition",
+                "label": root_plan_definition.get("title", plan_definition_id),
+                "children": visit_children,
+            }
+        ],
+    }
+
+
+_INTENT_ORDER = ("proposal", "plan", "order")
+
+
+def _request_chain_node(
+    by_intent: dict[str, dict], proposal_children: list[dict], tail_children: list[dict]
+) -> dict | None:
+    """Nest the proposal -> plan -> order chain actually materialized so far.
+
+    `proposal_children` (e.g. an activity's own chain) attach to the proposal,
+    matching where the CPG flow really creates them (basedOn the proposal);
+    `tail_children` (e.g. Appointment) attach to the most-advanced intent
+    present, since that's the request that spawned them.
+    """
+    present = [intent for intent in _INTENT_ORDER if intent in by_intent]
+    if not present:
+        return None
+
+    nodes = [
+        {
+            "id": by_intent[intent]["id"],
+            "type": "ServiceRequest",
+            "label": f"{_request_text(by_intent[intent])} — {intent} · {by_intent[intent].get('status', '')}",
+            "children": [],
+        }
+        for intent in present
+    ]
+    nodes[0]["children"] = list(proposal_children)
+    for i in range(len(nodes) - 1):
+        nodes[i]["children"].append(nodes[i + 1])
+    nodes[-1]["children"].extend(tail_children)
+    return nodes[0]
+
+
+def _appointment_node(appointment: dict, children: list[dict]) -> dict:
+    return {
+        "id": appointment["id"],
+        "type": "Appointment",
+        "label": f"Appointment — {appointment.get('status', '')}",
+        "children": children,
+    }
+
+
+def _encounter_node(encounter: dict) -> dict:
+    return {
+        "id": encounter["id"],
+        "type": "Encounter",
+        "label": f"Encounter — {encounter.get('status', '')}",
+        "children": [],
+    }
+
+
+def _task_activity_id(task: dict, plan_definition_id: str) -> str | None:
+    parsed = parse_tag(tag_value(task) or "", plan_definition_id)
+    return parsed[1] if parsed else None
+
+
+async def _task_event_node(client: FhirClient, task: dict) -> dict:
+    children = []
+    for output in task.get("output", []):
+        reference = output.get("valueReference", {}).get("reference", "")
+        procedure_id = _resource_id_from_uri(reference, "Procedure")
+        if procedure_id is None:
+            continue
+        procedure = await client.read("Procedure", procedure_id)
+        code = procedure.get("code", {})
+        coding = (code.get("coding") or [{}])[0]
+        label = code.get("text") or coding.get("display") or coding.get("code") or procedure["id"]
+        children.append(
+            {
+                "id": procedure["id"],
+                "type": "Procedure",
+                "label": f"{label} — {procedure.get('status', '')}",
+                "children": [],
+            }
+        )
+    return {
+        "id": task["id"],
+        "type": "Task",
+        "label": f"{task.get('description') or 'Task'} — {task.get('status', '')}",
+        "children": children,
+    }
+
+
+async def _visit_event_node(
+    client: FhirClient, chain: VisitChain, plan_definition_id: str
+) -> dict | None:
+    tail_children = []
+    if chain.appointment is not None:
+        appointment_children = (
+            [_encounter_node(chain.encounter)] if chain.encounter is not None else []
+        )
+        tail_children = [_appointment_node(chain.appointment, appointment_children)]
+
+    activity_nodes = []
+    for activity_id, by_intent in chain.activities.items():
+        matching_tasks = [
+            task for task in chain.tasks if _task_activity_id(task, plan_definition_id) == activity_id
+        ]
+        task_nodes = [await _task_event_node(client, task) for task in matching_tasks]
+        activity_node = _request_chain_node(by_intent, [], task_nodes)
+        if activity_node is not None:
+            activity_nodes.append(activity_node)
+
+    return _request_chain_node(chain.requests, activity_nodes, tail_children)
+
+
+async def build_request_event_tree(client: FhirClient, subject_id: str) -> dict:
+    """The instance-level counterpart to `build_protocol_tree`: what has actually
+    been materialized for this subject so far, following the real basedOn/output
+    lineage from each visit's proposal through to Appointment/Encounter/Task/Procedure.
+    """
+    workspace = await _load_workspace(client, subject_id)
+
+    visit_nodes = []
+    for action_id in workspace.graph.nodes:
+        chain = workspace.chains.get(action_id)
+        if chain is None:
+            continue
+        visit_node = await _visit_event_node(client, chain, workspace.plan_definition_id)
+        if visit_node is not None:
+            visit_nodes.append(visit_node)
+
+    subject_identifier = next(
+        (
+            entry.get("value")
+            for entry in workspace.subject.get("identifier", [])
+            if entry.get("system") == "urn:vulcan-soa:subject-id"
+        ),
+        None,
+    )
+    return {
+        "id": subject_id,
+        "type": "ResearchSubject",
+        "label": subject_identifier or subject_id,
+        "children": visit_nodes,
+    }
 
 
 async def _load_activity_definitions(client: FhirClient, node: VisitNode) -> list[dict]:

@@ -228,3 +228,143 @@ def test_list_study_subjects_returns_empty_list():
 
     assert response.status_code == 200
     assert response.json() == []
+
+
+@respx.mock
+def test_protocol_tree_builds_full_resource_tree():
+    respx.get("https://aidbox.test/fhir/ResearchStudy/study-1").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "ResearchStudy",
+                "id": "study-1",
+                "title": "UC1 Demo Study",
+                "protocol": [{"reference": "PlanDefinition/plan-1"}],
+            },
+        )
+    )
+    respx.get("https://aidbox.test/fhir/PlanDefinition/plan-1").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "PlanDefinition",
+                "id": "plan-1",
+                "title": "UC1 Protocol",
+                "action": [
+                    {
+                        "id": "screening-1",
+                        "title": "Screening",
+                        "definitionCanonical": "http://example.org/PlanDefinition/visit-screening",
+                    }
+                ],
+            },
+        )
+    )
+    respx.get("https://aidbox.test/fhir/PlanDefinition/visit-screening").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "PlanDefinition",
+                "id": "visit-screening",
+                "action": [
+                    {
+                        "title": "Vital Signs",
+                        "definitionUri": "ActivityDefinition/act-vitals",
+                    },
+                    {
+                        "title": "ADAS-Cog",
+                        "definitionCanonical": "http://example.org/soa/Questionnaire/q-adas-cog",
+                    },
+                ],
+            },
+        )
+    )
+    respx.get("https://aidbox.test/fhir/ActivityDefinition/act-vitals").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "ActivityDefinition",
+                "id": "act-vitals",
+                "status": "active",
+                "observationResultRequirement": ["ObservationDefinition/od-temp"],
+            },
+        )
+    )
+    respx.get("https://aidbox.test/fhir/ObservationDefinition/od-temp").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "ObservationDefinition",
+                "id": "od-temp",
+                "code": {"coding": [{"code": "8310-5", "display": "Body temperature"}]},
+            },
+        )
+    )
+
+    test_client = _app_client()
+
+    response = test_client.get("/api/research-studies/study-1/protocol-tree")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": "study-1",
+        "type": "ResearchStudy",
+        "label": "UC1 Demo Study",
+        "children": [
+            {
+                "id": "plan-1",
+                "type": "PlanDefinition",
+                "label": "UC1 Protocol",
+                "children": [
+                    {
+                        "id": "screening-1",
+                        "type": "PlanDefinition",
+                        "label": "Screening",
+                        "children": [
+                            {
+                                "id": "act-vitals",
+                                "type": "ActivityDefinition",
+                                "label": "Vital Signs",
+                                "children": [
+                                    {
+                                        "id": "od-temp",
+                                        "type": "ObservationDefinition",
+                                        "label": "Body temperature",
+                                        "children": [],
+                                    }
+                                ],
+                            },
+                            {
+                                "id": "q-adas-cog",
+                                "type": "Questionnaire",
+                                "label": "ADAS-Cog",
+                                "children": [],
+                            },
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+
+@respx.mock
+def test_protocol_tree_rejects_plan_not_in_study():
+    respx.get("https://aidbox.test/fhir/ResearchStudy/study-1").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "ResearchStudy",
+                "id": "study-1",
+                "protocol": [{"reference": "PlanDefinition/plan-1"}],
+            },
+        )
+    )
+
+    test_client = _app_client()
+
+    response = test_client.get(
+        "/api/research-studies/study-1/protocol-tree", params={"planDefinitionId": "plan-99"}
+    )
+
+    assert response.status_code == 400

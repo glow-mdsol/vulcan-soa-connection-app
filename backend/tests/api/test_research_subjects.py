@@ -143,6 +143,8 @@ def test_get_schedule_returns_resolved_state():
     assert body["milestones"] == [
         {"milestone": "C16735", "display": "Informed Consent", "date": "2026-07-01"}
     ]
+    assert body["studyId"] == "study-1"
+    assert body["planDefinitionId"] == "plan-1"
 
 
 @respx.mock
@@ -741,3 +743,250 @@ def test_visit_activities_unknown_action_returns_404():
     response = test_client.get("/api/research-subjects/subj-1/visits/nope-9/activities")
 
     assert response.status_code == 404
+
+
+@respx.mock
+def test_request_event_tree_builds_full_lineage_for_active_visit():
+    respx.get("https://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json=SUBJECT)
+    )
+    respx.get("https://aidbox.test/fhir/ResearchStudy/study-1").mock(
+        return_value=httpx.Response(200, json=STUDY)
+    )
+    respx.get("https://aidbox.test/fhir/PlanDefinition/plan-1").mock(
+        return_value=httpx.Response(200, json=PLAN_DEFINITION)
+    )
+
+    visit_tag = {"system": "urn:vulcan-soa:plan-action", "value": "plan-1#screening-1"}
+    activity_tag = {
+        "system": "urn:vulcan-soa:plan-action",
+        "value": "plan-1#screening-1#act-vitals",
+    }
+    service_requests = _bundle(
+        {
+            "resourceType": "ServiceRequest",
+            "id": "sr-visit-proposal",
+            "intent": "proposal",
+            "status": "completed",
+            "subject": {"reference": "Patient/patient-1"},
+            "identifier": [visit_tag],
+            "code": {"concept": {"text": "Screening"}},
+        },
+        {
+            "resourceType": "ServiceRequest",
+            "id": "sr-visit-plan",
+            "intent": "plan",
+            "status": "completed",
+            "subject": {"reference": "Patient/patient-1"},
+            "identifier": [visit_tag],
+            "code": {"concept": {"text": "Screening"}},
+        },
+        {
+            "resourceType": "ServiceRequest",
+            "id": "sr-visit-order",
+            "intent": "order",
+            "status": "active",
+            "subject": {"reference": "Patient/patient-1"},
+            "identifier": [visit_tag],
+            "code": {"concept": {"text": "Screening"}},
+        },
+        {
+            "resourceType": "ServiceRequest",
+            "id": "sr-act-proposal",
+            "intent": "proposal",
+            "status": "completed",
+            "subject": {"reference": "Patient/patient-1"},
+            "identifier": [activity_tag],
+            "code": {"concept": {"text": "Vital Signs"}},
+        },
+        {
+            "resourceType": "ServiceRequest",
+            "id": "sr-act-order",
+            "intent": "order",
+            "status": "active",
+            "subject": {"reference": "Patient/patient-1"},
+            "identifier": [activity_tag],
+            "code": {"concept": {"text": "Vital Signs"}},
+        },
+    )
+    respx.get("https://aidbox.test/fhir/ServiceRequest").mock(
+        return_value=httpx.Response(200, json=service_requests)
+    )
+    respx.get("https://aidbox.test/fhir/Appointment").mock(
+        return_value=httpx.Response(
+            200,
+            json=_bundle(
+                {
+                    "resourceType": "Appointment",
+                    "id": "appt-1",
+                    "status": "booked",
+                    "identifier": [visit_tag],
+                    "participant": [
+                        {"actor": {"reference": "Patient/patient-1"}, "status": "accepted"},
+                        {
+                            "actor": {"reference": "Practitioner/site-coordinator-demo"},
+                            "status": "accepted",
+                        },
+                    ],
+                }
+            ),
+        )
+    )
+    respx.get("https://aidbox.test/fhir/Encounter").mock(
+        return_value=httpx.Response(
+            200,
+            json=_bundle(
+                {
+                    "resourceType": "Encounter",
+                    "id": "enc-1",
+                    "status": "in-progress",
+                    "subject": {"reference": "Patient/patient-1"},
+                    "identifier": [visit_tag],
+                }
+            ),
+        )
+    )
+    respx.get("https://aidbox.test/fhir/Task").mock(
+        return_value=httpx.Response(
+            200,
+            json=_bundle(
+                {
+                    "resourceType": "Task",
+                    "id": "task-1",
+                    "status": "completed",
+                    "for": {"reference": "Patient/patient-1"},
+                    "identifier": [activity_tag],
+                    "description": "Vital Signs",
+                    "encounter": {"reference": "Encounter/enc-1"},
+                    "output": [
+                        {
+                            "type": {"text": "procedure"},
+                            "valueReference": {"reference": "Procedure/proc-1"},
+                        }
+                    ],
+                }
+            ),
+        )
+    )
+    respx.get("https://aidbox.test/fhir/Procedure/proc-1").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "resourceType": "Procedure",
+                "id": "proc-1",
+                "status": "completed",
+                "code": {"text": "Vital Signs"},
+            },
+        )
+    )
+
+    app = _build_test_app()
+    app.dependency_overrides[get_fhir_client] = lambda: FhirClient(
+        base_url="https://aidbox.test/fhir", access_token="tok-1"
+    )
+    test_client = TestClient(app)
+
+    response = test_client.get("/api/research-subjects/subj-1/request-event-tree")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": "subj-1",
+        "type": "ResearchSubject",
+        "label": "SUBJ-001",
+        "children": [
+            {
+                "id": "sr-visit-proposal",
+                "type": "ServiceRequest",
+                "label": "Screening — proposal · completed",
+                "children": [
+                    {
+                        "id": "sr-act-proposal",
+                        "type": "ServiceRequest",
+                        "label": "Vital Signs — proposal · completed",
+                        "children": [
+                            {
+                                "id": "sr-act-order",
+                                "type": "ServiceRequest",
+                                "label": "Vital Signs — order · active",
+                                "children": [
+                                    {
+                                        "id": "task-1",
+                                        "type": "Task",
+                                        "label": "Vital Signs — completed",
+                                        "children": [
+                                            {
+                                                "id": "proc-1",
+                                                "type": "Procedure",
+                                                "label": "Vital Signs — completed",
+                                                "children": [],
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "id": "sr-visit-plan",
+                        "type": "ServiceRequest",
+                        "label": "Screening — plan · completed",
+                        "children": [
+                            {
+                                "id": "sr-visit-order",
+                                "type": "ServiceRequest",
+                                "label": "Screening — order · active",
+                                "children": [
+                                    {
+                                        "id": "appt-1",
+                                        "type": "Appointment",
+                                        "label": "Appointment — booked",
+                                        "children": [
+                                            {
+                                                "id": "enc-1",
+                                                "type": "Encounter",
+                                                "label": "Encounter — in-progress",
+                                                "children": [],
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                ],
+            }
+        ],
+    }
+
+
+@respx.mock
+def test_request_event_tree_is_empty_for_a_subject_with_no_materialized_visits():
+    respx.get("https://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json=SUBJECT)
+    )
+    respx.get("https://aidbox.test/fhir/ResearchStudy/study-1").mock(
+        return_value=httpx.Response(200, json=STUDY)
+    )
+    respx.get("https://aidbox.test/fhir/PlanDefinition/plan-1").mock(
+        return_value=httpx.Response(200, json=PLAN_DEFINITION)
+    )
+    for resource_type in ("ServiceRequest", "Appointment", "Encounter", "Task"):
+        respx.get(f"https://aidbox.test/fhir/{resource_type}").mock(
+            return_value=httpx.Response(200, json={"resourceType": "Bundle"})
+        )
+
+    app = _build_test_app()
+    app.dependency_overrides[get_fhir_client] = lambda: FhirClient(
+        base_url="https://aidbox.test/fhir", access_token="tok-1"
+    )
+    test_client = TestClient(app)
+
+    response = test_client.get("/api/research-subjects/subj-1/request-event-tree")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": "subj-1",
+        "type": "ResearchSubject",
+        "label": "SUBJ-001",
+        "children": [],
+    }

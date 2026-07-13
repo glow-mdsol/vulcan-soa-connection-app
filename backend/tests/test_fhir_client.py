@@ -2,6 +2,7 @@ import httpx
 import pytest
 import respx
 
+from vulcan_soa.cache import TTLCache
 from vulcan_soa.fhir_client import FhirClient
 
 
@@ -138,6 +139,56 @@ async def test_put_by_id_uses_basic_auth_when_configured():
 
     auth_header = route.calls.last.request.headers["Authorization"]
     assert auth_header.startswith("Basic ")
+
+
+@respx.mock
+async def test_read_caches_definitional_resource_types():
+    route = respx.get("http://aidbox.test/fhir/PlanDefinition/plan-1").mock(
+        return_value=httpx.Response(200, json={"resourceType": "PlanDefinition", "id": "plan-1"})
+    )
+    cache = TTLCache(ttl_seconds=600)
+    client = FhirClient(
+        base_url="http://aidbox.test/fhir", access_token="tok-123", definitional_cache=cache
+    )
+
+    first = await client.read("PlanDefinition", "plan-1")
+    second = await client.read("PlanDefinition", "plan-1")
+    await client.close()
+
+    assert first == second == {"resourceType": "PlanDefinition", "id": "plan-1"}
+    assert route.call_count == 1
+
+
+@respx.mock
+async def test_read_does_not_cache_non_definitional_resource_types():
+    route = respx.get("http://aidbox.test/fhir/ResearchSubject/subj-1").mock(
+        return_value=httpx.Response(200, json={"resourceType": "ResearchSubject", "id": "subj-1"})
+    )
+    cache = TTLCache(ttl_seconds=600)
+    client = FhirClient(
+        base_url="http://aidbox.test/fhir", access_token="tok-123", definitional_cache=cache
+    )
+
+    await client.read("ResearchSubject", "subj-1")
+    await client.read("ResearchSubject", "subj-1")
+    await client.close()
+
+    assert route.call_count == 2
+    assert len(cache) == 0
+
+
+@respx.mock
+async def test_read_without_a_cache_hits_the_server_every_time():
+    route = respx.get("http://aidbox.test/fhir/PlanDefinition/plan-1").mock(
+        return_value=httpx.Response(200, json={"resourceType": "PlanDefinition", "id": "plan-1"})
+    )
+    client = FhirClient(base_url="http://aidbox.test/fhir", access_token="tok-123")
+
+    await client.read("PlanDefinition", "plan-1")
+    await client.read("PlanDefinition", "plan-1")
+    await client.close()
+
+    assert route.call_count == 2
 
 
 @respx.mock

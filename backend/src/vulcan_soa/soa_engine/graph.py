@@ -76,7 +76,7 @@ def _parse_node(action: dict) -> VisitNode:
         action_id=action["id"],
         title=action.get("title", action["id"]),
         transitions=transitions,
-        definition_uri=action.get("definitionUri"),
+        definition_uri=action.get("definitionUri") or action.get("definitionCanonical"),
     )
 
 
