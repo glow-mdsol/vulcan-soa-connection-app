@@ -8,12 +8,15 @@ import {
   getSchedule,
   performVisit,
   promoteVisit,
+  recordMilestone,
   respondToAppointment,
   scheduleVisit,
   withdrawSubject,
 } from "../../api/client";
 import type { NextStep, Schedule } from "../../api/types";
+import Milestones from "./Milestones";
 import Timeline from "./Timeline";
+import VisitActivities from "./VisitActivities";
 import VisitCard from "./VisitCard";
 
 interface PendingChoice {
@@ -95,6 +98,26 @@ export default function SubjectDashboard() {
     }
   }
 
+  async function handleRecordMilestone(
+    milestone: string,
+    date: string | null,
+    display: string | null,
+  ) {
+    if (!subjectId) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await recordMilestone(subjectId, milestone, date, display);
+      setSchedule((current) => (current ? { ...current, milestones: result.milestones } : current));
+      setError(null);
+    } catch {
+      setError("Could not record the milestone.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleWithdraw() {
     if (!subjectId) {
       return;
@@ -125,7 +148,17 @@ export default function SubjectDashboard() {
   return (
     <div>
       <h2 className="page-title">
-        Subject <span className="meta">{subjectId}</span>
+        Subject <span className="meta">{subjectId}</span>{" "}
+        {schedule.subjectStatus && (
+          <span
+            className={
+              schedule.subjectStatus === "active" ? "badge badge-success" : "badge"
+            }
+          >
+            {schedule.subjectStatus}
+          </span>
+        )}{" "}
+        {schedule.subjectState && <span className="badge">{schedule.subjectState}</span>}
       </h2>
       {error && (
         <p role="alert" className="alert">
@@ -139,12 +172,19 @@ export default function SubjectDashboard() {
       )}
 
       <div className="dashboard-grid">
-        <Timeline
-          completed={schedule.completed}
-          current={schedule.current}
-          nextSteps={schedule.nextSteps}
-          titles={schedule.titles}
-        />
+        <div className="dashboard-rail">
+          <Timeline
+            completed={schedule.completed}
+            current={schedule.current}
+            nextSteps={schedule.nextSteps}
+            titles={schedule.titles}
+          />
+          <Milestones
+            milestones={schedule.milestones ?? []}
+            busy={busy}
+            onRecord={handleRecordMilestone}
+          />
+        </div>
 
         <div>
           <section aria-label="Current visits">
@@ -157,6 +197,9 @@ export default function SubjectDashboard() {
                   title={schedule.titles?.[actionId]}
                   detail={schedule.visits[actionId]}
                   busy={busy}
+                  subjectId={subjectId}
+                  studyId={schedule.studyId}
+                  planDefinitionId={schedule.planDefinitionId}
                   onPlan={() => runGate(() => promoteVisit(subjectId!, actionId, "plan"), "Could not accept the proposal.")}
                   onOrder={() => runGate(() => promoteVisit(subjectId!, actionId, "order"), "Could not authorize the visit.")}
                   onSchedule={() => runGate(() => scheduleVisit(subjectId!, actionId), "Could not schedule the visit.")}
@@ -174,7 +217,9 @@ export default function SubjectDashboard() {
                     runGate(() => completeTask(subjectId!, actionId, taskId), "Could not complete the task.")
                   }
                   onCompleteVisit={() => handleComplete(actionId)}
-                />
+                >
+                  <VisitActivities subjectId={subjectId!} actionId={actionId} />
+                </VisitCard>
               ))}
             </ul>
           </section>

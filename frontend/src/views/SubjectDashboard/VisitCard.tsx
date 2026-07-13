@@ -1,3 +1,6 @@
+import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
+
 import type { VisitDetail } from "../../api/types";
 
 const PHASES = ["proposed", "planned", "ordered", "scheduled", "booked", "performing", "completed"] as const;
@@ -7,6 +10,9 @@ interface VisitCardProps {
   title?: string;
   detail: VisitDetail | undefined;
   busy?: boolean;
+  subjectId?: string;
+  studyId?: string;
+  planDefinitionId?: string;
   onPlan: () => void;
   onOrder: () => void;
   onSchedule: () => void;
@@ -15,6 +21,7 @@ interface VisitCardProps {
   onPerform: () => void;
   onCompleteTask: (taskId: string) => void;
   onCompleteVisit: () => void;
+  children?: ReactNode;
 }
 
 export default function VisitCard({
@@ -22,6 +29,9 @@ export default function VisitCard({
   title,
   detail,
   busy = false,
+  subjectId,
+  studyId,
+  planDefinitionId,
   onPlan,
   onOrder,
   onSchedule,
@@ -30,6 +40,7 @@ export default function VisitCard({
   onPerform,
   onCompleteTask,
   onCompleteVisit,
+  children,
 }: VisitCardProps) {
   const phase = detail?.phase ?? "proposed";
   const phaseIndex = PHASES.indexOf(phase as (typeof PHASES)[number]);
@@ -42,6 +53,30 @@ export default function VisitCard({
         <strong className="card-title">{title ?? actionId}</strong>
         <span className="badge">{phase}</span>
       </div>
+      {(studyId || subjectId) && (
+        <div className="workflow-diagram-links">
+          {studyId && (
+            <Link
+              className="workflow-diagram-link"
+              to={`/studies/${studyId}/protocol-tree${planDefinitionId ? `?plan=${planDefinitionId}` : ""}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Definition diagram ↗
+            </Link>
+          )}
+          {subjectId && (
+            <Link
+              className="workflow-diagram-link"
+              to={`/subjects/${subjectId}/request-event-tree`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Request/event diagram ↗
+            </Link>
+          )}
+        </div>
+      )}
       {title && <div className="meta">{actionId}</div>}
       <ol aria-label="Visit phases" className="stepper">
         {PHASES.map((p, index) => (
@@ -133,6 +168,8 @@ export default function VisitCard({
           </button>
         </div>
       )}
+
+      {children}
     </li>
   );
 }

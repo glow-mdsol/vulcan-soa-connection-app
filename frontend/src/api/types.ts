@@ -58,6 +58,32 @@ export interface VisitDetail {
   tasks?: VisitTask[];
 }
 
+export interface ActivityObservation {
+  id: string;
+  display: string;
+  members: ActivityObservation[];
+}
+
+export interface VisitActivity {
+  id: string;
+  title: string;
+  type: "ActivityDefinition" | "Questionnaire";
+  observations: ActivityObservation[];
+}
+
+export interface SubjectMilestone {
+  milestone: string;
+  display: string | null;
+  date: string | null;
+}
+
+export interface WorkUnit {
+  id: string;
+  title: string;
+  status: string;
+  description: string | null;
+}
+
 export interface Schedule {
   completed: string[];
   current: string[];
@@ -65,11 +91,62 @@ export interface Schedule {
   ambiguous: boolean;
   visits: Record<string, VisitDetail>;
   titles?: Record<string, string>;
+  subjectIdentifier?: string | null;
+  subjectStatus?: string | null;
+  subjectState?: string | null;
+  milestones?: SubjectMilestone[];
+  studyId?: string;
+  planDefinitionId?: string;
+}
+
+// Shared shape for both the static (definition) and instance (request/event)
+// workflow diagrams — generic over the resource-type domain each one uses.
+export interface WorkflowTreeNode<TType extends string = string> {
+  id: string;
+  type: TType;
+  label: string;
+  children: WorkflowTreeNode<TType>[];
+}
+
+export type ProtocolResourceType =
+  | "ResearchStudy"
+  | "PlanDefinition"
+  | "ActivityDefinition"
+  | "Questionnaire"
+  | "ObservationDefinition";
+
+export type ProtocolTreeNode = WorkflowTreeNode<ProtocolResourceType>;
+
+export type RequestEventResourceType =
+  | "ResearchSubject"
+  | "ServiceRequest"
+  | "Appointment"
+  | "Encounter"
+  | "Task"
+  | "Procedure";
+
+export type RequestEventTreeNode = WorkflowTreeNode<RequestEventResourceType>;
+
+export interface RecordMilestoneResult {
+  researchSubjectId: string;
+  milestones: SubjectMilestone[];
+}
+
+export interface StudySubjectSummary {
+  researchSubjectId: string;
+  subjectIdentifier: string | null;
+  patientId: string;
+  status: string | null;
 }
 
 export interface EnrollResult {
   researchSubjectId: string;
   schedule: Schedule;
+}
+
+export interface DeleteEnrollmentResult {
+  id: string;
+  deleted: boolean;
 }
 
 export interface WithdrawResult {

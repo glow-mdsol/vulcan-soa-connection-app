@@ -6,6 +6,8 @@ import type { Context } from "./api/types";
 import LaunchError from "./launch/LaunchError";
 import LaunchPending from "./launch/LaunchPending";
 import Enroll from "./views/Enroll/Enroll";
+import DefinitionTree from "./views/ProtocolTree/DefinitionTree";
+import RequestEventTree from "./views/ProtocolTree/RequestEventTree";
 import StudyWorklist from "./views/StudyWorklist/StudyWorklist";
 import SubjectDashboard from "./views/SubjectDashboard/SubjectDashboard";
 
@@ -48,6 +50,8 @@ export default function AppRoutes() {
       <Route path="/launch-error" element={<LaunchError />} />
       <Route path="/enroll/:studyId" element={<Enroll />} />
       <Route path="/subjects/:subjectId" element={<SubjectDashboard />} />
+      <Route path="/studies/:studyId/protocol-tree" element={<DefinitionTree />} />
+      <Route path="/subjects/:subjectId/request-event-tree" element={<RequestEventTree />} />
     </Routes>
   );
 }

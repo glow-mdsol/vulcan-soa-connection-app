@@ -1,13 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  assignSubjectIdentifier,
   completeVisit,
+  deleteEnrollment,
   enrollPatient,
   getContext,
+  getProtocolTree,
+  getRequestEventTree,
   getResearchStudy,
   getSchedule,
   listResearchStudies,
+  listStudySubjects,
+  listVisitActivities,
   logout,
+  recordMilestone,
   withdrawSubject,
 } from "./client";
 
@@ -65,6 +72,116 @@ describe("api client", () => {
     expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/research-studies/study-1");
   });
 
+  it("listStudySubjects calls GET /api/research-studies/{id}/subjects", async () => {
+    mockFetchOnce([
+      {
+        researchSubjectId: "subj-1",
+        subjectIdentifier: "SUBJ-001",
+        patientId: "patient-1",
+        status: "on-study",
+      },
+    ]);
+
+    const subjects = await listStudySubjects("study-1");
+
+    expect(subjects).toEqual([
+      {
+        researchSubjectId: "subj-1",
+        subjectIdentifier: "SUBJ-001",
+        patientId: "patient-1",
+        status: "on-study",
+      },
+    ]);
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/research-studies/study-1/subjects");
+  });
+
+  it("assignSubjectIdentifier posts the identifier as JSON", async () => {
+    mockFetchOnce({
+      researchSubjectId: "subj-1",
+      subjectIdentifier: "SUBJ-001",
+      patientId: "patient-1",
+      status: "active",
+    });
+
+    const summary = await assignSubjectIdentifier("subj-1", "SUBJ-001");
+
+    expect(summary.subjectIdentifier).toBe("SUBJ-001");
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(url).toBe("/api/research-subjects/subj-1/identifier");
+    expect(init?.method).toBe("POST");
+    expect(init?.body).toBe(JSON.stringify({ subjectIdentifier: "SUBJ-001" }));
+  });
+
+  it("recordMilestone posts the milestone, display, and date as JSON", async () => {
+    mockFetchOnce({
+      researchSubjectId: "subj-1",
+      milestones: [{ milestone: "C114209", display: "Subject is Randomized", date: "2026-07-08" }],
+    });
+
+    const result = await recordMilestone("subj-1", "C114209", "2026-07-08", "Subject is Randomized");
+
+    expect(result.milestones).toEqual([
+      { milestone: "C114209", display: "Subject is Randomized", date: "2026-07-08" },
+    ]);
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(url).toBe("/api/research-subjects/subj-1/milestones");
+    expect(init?.method).toBe("POST");
+    expect(init?.body).toBe(
+      JSON.stringify({ milestone: "C114209", display: "Subject is Randomized", date: "2026-07-08" }),
+    );
+  });
+
+  it("listVisitActivities calls GET /visits/{actionId}/activities", async () => {
+    mockFetchOnce([
+      {
+        id: "act-vitals",
+        title: "Vital Signs",
+        type: "ActivityDefinition",
+        observations: [{ id: "od-1", display: "Systolic blood pressure", members: [] }],
+      },
+    ]);
+
+    const activities = await listVisitActivities("subj-1", "screening-1");
+
+    expect(activities).toHaveLength(1);
+    expect(activities[0].type).toBe("ActivityDefinition");
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe(
+      "/api/research-subjects/subj-1/visits/screening-1/activities",
+    );
+  });
+
+  it("getProtocolTree calls GET /protocol-tree without a plan filter", async () => {
+    mockFetchOnce({ id: "study-1", type: "ResearchStudy", label: "UC1 Demo Study", children: [] });
+
+    const tree = await getProtocolTree("study-1");
+
+    expect(tree.type).toBe("ResearchStudy");
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe(
+      "/api/research-studies/study-1/protocol-tree",
+    );
+  });
+
+  it("getProtocolTree includes planDefinitionId as a query param when given", async () => {
+    mockFetchOnce({ id: "study-1", type: "ResearchStudy", label: "UC1 Demo Study", children: [] });
+
+    await getProtocolTree("study-1", "plan-2");
+
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe(
+      "/api/research-studies/study-1/protocol-tree?planDefinitionId=plan-2",
+    );
+  });
+
+  it("getRequestEventTree calls GET /research-subjects/{id}/request-event-tree", async () => {
+    mockFetchOnce({ id: "subj-1", type: "ResearchSubject", label: "SUBJ-001", children: [] });
+
+    const tree = await getRequestEventTree("subj-1");
+
+    expect(tree.type).toBe("ResearchSubject");
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe(
+      "/api/research-subjects/subj-1/request-event-tree",
+    );
+  });
+
   it("logout calls DELETE /api/context", async () => {
     mockFetchOnce({}, true, 204);
 
@@ -76,19 +193,34 @@ describe("api client", () => {
     expect(init?.credentials).toBe("include");
   });
 
-  it("enrollPatient posts the patientId as JSON", async () => {
+  it("enrollPatient posts the patientId and subjectIdentifier as JSON", async () => {
     mockFetchOnce({
       researchSubjectId: "subj-1",
       schedule: { completed: [], current: [], nextSteps: [], ambiguous: false },
     });
 
-    const result = await enrollPatient("study-1", "patient-1");
+    const result = await enrollPatient("study-1", "patient-1", "SUBJ-001", "plan-2");
 
     expect(result.researchSubjectId).toBe("subj-1");
     const [url, init] = vi.mocked(fetch).mock.calls[0];
     expect(url).toBe("/api/research-studies/study-1/enroll");
     expect(init?.method).toBe("POST");
-    expect(JSON.parse(init?.body as string)).toEqual({ patientId: "patient-1" });
+    expect(JSON.parse(init?.body as string)).toEqual({
+      patientId: "patient-1",
+      subjectIdentifier: "SUBJ-001",
+      planDefinitionId: "plan-2",
+    });
+  });
+
+  it("deleteEnrollment calls DELETE /api/research-subjects/{id}", async () => {
+    mockFetchOnce({ id: "subj-1", deleted: true });
+
+    const result = await deleteEnrollment("subj-1");
+
+    expect(result).toEqual({ id: "subj-1", deleted: true });
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(url).toBe("/api/research-subjects/subj-1");
+    expect(init?.method).toBe("DELETE");
   });
 
   it("getSchedule calls GET /api/research-subjects/{id}/schedule", async () => {

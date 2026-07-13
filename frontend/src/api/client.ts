@@ -1,11 +1,17 @@
 import type {
   Context,
+  DeleteEnrollmentResult,
   EnrollResult,
   NextStep,
   PatientSummary,
+  ProtocolTreeNode,
+  RecordMilestoneResult,
+  RequestEventTreeNode,
   ResearchStudyDetail,
   ResearchStudySummary,
   Schedule,
+  StudySubjectSummary,
+  VisitActivity,
   VisitDetail,
   WithdrawResult,
 } from "./types";
@@ -45,16 +51,80 @@ export function getResearchStudy(studyId: string): Promise<ResearchStudyDetail> 
   return request<ResearchStudyDetail>(`/api/research-studies/${studyId}`);
 }
 
+export function getProtocolTree(
+  studyId: string,
+  planDefinitionId: string | null = null,
+): Promise<ProtocolTreeNode> {
+  const query = planDefinitionId
+    ? `?planDefinitionId=${encodeURIComponent(planDefinitionId)}`
+    : "";
+  return request<ProtocolTreeNode>(`/api/research-studies/${studyId}/protocol-tree${query}`);
+}
+
+export function listStudySubjects(studyId: string): Promise<StudySubjectSummary[]> {
+  return request<StudySubjectSummary[]>(`/api/research-studies/${studyId}/subjects`);
+}
+
 export function listPatients(): Promise<PatientSummary[]> {
   return request<PatientSummary[]>("/api/patients");
 }
 
-export function enrollPatient(studyId: string, patientId: string): Promise<EnrollResult> {
-  return postJson<EnrollResult>(`/api/research-studies/${studyId}/enroll`, { patientId });
+export function enrollPatient(
+  studyId: string,
+  patientId: string,
+  subjectIdentifier: string,
+  planDefinitionId: string | null = null,
+): Promise<EnrollResult> {
+  return postJson<EnrollResult>(`/api/research-studies/${studyId}/enroll`, {
+    patientId,
+    subjectIdentifier,
+    planDefinitionId,
+  });
+}
+
+export function deleteEnrollment(subjectId: string): Promise<DeleteEnrollmentResult> {
+  return request<DeleteEnrollmentResult>(`/api/research-subjects/${subjectId}`, {
+    method: "DELETE",
+  });
+}
+
+export function assignSubjectIdentifier(
+  subjectId: string,
+  subjectIdentifier: string,
+): Promise<StudySubjectSummary> {
+  return postJson<StudySubjectSummary>(`/api/research-subjects/${subjectId}/identifier`, {
+    subjectIdentifier,
+  });
+}
+
+export function recordMilestone(
+  subjectId: string,
+  milestone: string,
+  date: string | null = null,
+  display: string | null = null,
+): Promise<RecordMilestoneResult> {
+  return postJson<RecordMilestoneResult>(`/api/research-subjects/${subjectId}/milestones`, {
+    milestone,
+    display,
+    date,
+  });
+}
+
+export function getRequestEventTree(subjectId: string): Promise<RequestEventTreeNode> {
+  return request<RequestEventTreeNode>(`/api/research-subjects/${subjectId}/request-event-tree`);
 }
 
 export function getSchedule(subjectId: string): Promise<Schedule> {
   return request<Schedule>(`/api/research-subjects/${subjectId}/schedule`);
+}
+
+export function listVisitActivities(
+  subjectId: string,
+  actionId: string,
+): Promise<VisitActivity[]> {
+  return request<VisitActivity[]>(
+    `/api/research-subjects/${subjectId}/visits/${actionId}/activities`,
+  );
 }
 
 export function completeVisit(

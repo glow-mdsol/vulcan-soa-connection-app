@@ -1,42 +1,11 @@
-import { useEffect, useState } from "react";
-
-import { getResearchStudy } from "../../api/client";
 import type { ResearchStudyDetail } from "../../api/types";
 
 interface ResearchStudyDetailsProps {
-  studyId: string;
+  study: ResearchStudyDetail | null;
+  error: string | null;
 }
 
-export default function ResearchStudyDetails({ studyId }: ResearchStudyDetailsProps) {
-  const [study, setStudy] = useState<ResearchStudyDetail | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadStudy() {
-      try {
-        const result = await getResearchStudy(studyId);
-        if (!active) {
-          return;
-        }
-        setStudy(result);
-        setError(null);
-      } catch {
-        if (!active) {
-          return;
-        }
-        setError("Could not load study details.");
-      }
-    }
-
-    loadStudy();
-
-    return () => {
-      active = false;
-    };
-  }, [studyId]);
-
+export default function ResearchStudyDetails({ study, error }: ResearchStudyDetailsProps) {
   return (
     <section className="card" aria-label="Research study details">
       <div className="card-header">

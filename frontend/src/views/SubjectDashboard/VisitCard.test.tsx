@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import type { VisitDetail } from "../../api/types";
@@ -103,5 +104,46 @@ describe("VisitCard", () => {
     render(<VisitCard actionId="E1" detail={{ phase: "ordered" }} {...handlers} />);
 
     expect(screen.queryByRole("button", { name: "Schedule now" })).not.toBeInTheDocument();
+  });
+
+  it("links to the definition diagram when a study and plan are known", () => {
+    const handlers = noopHandlers();
+    render(
+      <MemoryRouter>
+        <VisitCard
+          actionId="E1"
+          detail={{ phase: "proposed" }}
+          studyId="study-1"
+          planDefinitionId="plan-1"
+          {...handlers}
+        />
+      </MemoryRouter>,
+    );
+
+    const link = screen.getByRole("link", { name: "Definition diagram ↗" });
+    expect(link).toHaveAttribute("href", "/studies/study-1/protocol-tree?plan=plan-1");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(screen.queryByRole("link", { name: /Request\/event diagram/ })).not.toBeInTheDocument();
+  });
+
+  it("links to the request/event diagram when a subject is known", () => {
+    const handlers = noopHandlers();
+    render(
+      <MemoryRouter>
+        <VisitCard actionId="E1" detail={{ phase: "proposed" }} subjectId="subj-1" {...handlers} />
+      </MemoryRouter>,
+    );
+
+    const link = screen.getByRole("link", { name: "Request/event diagram ↗" });
+    expect(link).toHaveAttribute("href", "/subjects/subj-1/request-event-tree");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(screen.queryByRole("link", { name: /Definition diagram/ })).not.toBeInTheDocument();
+  });
+
+  it("omits both workflow diagram links when no study or subject is known", () => {
+    const handlers = noopHandlers();
+    render(<VisitCard actionId="E1" detail={{ phase: "proposed" }} {...handlers} />);
+
+    expect(screen.queryByRole("link", { name: /diagram/ })).not.toBeInTheDocument();
   });
 });
